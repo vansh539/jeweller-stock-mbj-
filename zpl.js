@@ -3,25 +3,27 @@
 /**
  * ZPL II label for Zebra GC420t — fold-over jewellery tag loaded LANDSCAPE.
  *
- * Full tag width ~80mm (PW=640). Neck (loop/hole) = first 20mm (160 dots).
- * Rectangular box = 55mm × 13mm (440 × 104 dots) starting after neck.
+ * PW=800 (100mm) matches physical media so the printer does NOT centre-offset.
+ * Neck (loop/hole) = first 20mm (160 dots). Box = 55mm × 13mm (440 × 104).
  *
- * NECK      x=0–159    (20mm)  — blank, loop/hole area, no printing
- * FACE 1    x=160–379  (27.5mm) — front: shop name, barcode, GW
+ * NECK      x=0–159    (20mm)   — blank, loop/hole area
+ * FACE 1    x=160–379  (27.5mm) — shop name, barcode, GW
  * FOLD LINE x=380               — dotted vertical line
- * FACE 2    x=383–599  (27.5mm) — back: SKU, name, metal/purity, stone, date/category
+ * FACE 2    x=383–599  (27.5mm) — SKU, name, metal/purity, stone, date/category
  */
 function generateZPL(item) {
-  const PW   = 640;   // ~80mm total tag (neck + 55mm box)
+  const PW   = 800;   // 100mm — must equal physical media width to avoid centering
   const LL   = 104;   // 13mm tall (1.3cm box height at 203dpi)
-  const NECK = 160;   // 20mm neck offset — box starts here
+  const NECK = 160;   // 20mm neck — box starts here
+  const BOX  = 440;   // 55mm box (both faces)
   const FACE = 217;   // usable dots per half-face
-  const HALF = NECK + 220;  // = 380, fold line at box midpoint
-  const L2   = HALF + 3;   // = 383, Face 2 content start
+  const HALF = NECK + 220;       // = 380, fold at box midpoint
+  const L2   = HALF + 3;        // = 383, Face 2 start
+  const BOXR = NECK + BOX;      // = 600, box right edge (for right-alignment)
 
   const lc  = (y, f, t) => `^FO${NECK},${y}${f}^FB${FACE},1,0,C,0^FD${t}^FS`;
   const rl  = (y, f, t) => `^FO${L2},${y}${f}^FD${t}^FS`;
-  const rr  = (y, f, t) => `^FO${L2},${y}${f}^FB${PW - L2 - 2},1,0,R,0^FD${t}^FS`;
+  const rr  = (y, f, t) => `^FO${L2},${y}${f}^FB${BOXR - L2 - 2},1,0,R,0^FD${t}^FS`;
 
   function barcodePayload(skuStr) {
     const m = skuStr.match(/JS-(\d{8})-(\d+)/);

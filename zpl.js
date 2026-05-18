@@ -13,7 +13,7 @@
  */
 function generateZPL(item) {
   const PW   = 800;   // 100mm — must equal physical media width to avoid centering
-  const LL   = 104;   // 13mm tall (1.3cm box height at 203dpi)
+  const LL   = 120;   // 15mm — full physical label pitch (not just the 13mm box)
   const HALF = 220;   // fold line at exact box midpoint (27.5mm)
   const L2   = HALF + 3;   // = 223, Face 2 start
   const FACE = HALF - 3;   // = 217, usable dots per half-face
@@ -68,16 +68,16 @@ function generateZPL(item) {
   lines.push('^LH0,0');
 
   // ── FACE 1 (front) — x=0 to x=220 ──────────────────────────────────────
-  lines.push(lc(2, '^A0N,9,7', 'M.BAJRANGLAL SONS'));
+  lines.push(lc(10, '^A0N,9,7', 'M.BAJRANGLAL SONS'));
 
-  // Barcode starts at x=4 (0.5mm from left edge)
-  lines.push(`^FO4,13^BY1,2^BCN,56,N,N,N^FD${bc}^FS`);
+  // Barcode at y=21 gives 8-dot top margin clear of label edge
+  lines.push(`^FO4,21^BY1,2^BCN,56,N,N,N^FD${bc}^FS`);
 
   // GW bold (double-print for weight)
-  lines.push(lc(76, '^A0N,10,8', `GW:${grossWeight}`));
-  lines.push(`^FO3,76^A0N,10,8^FB${FACE},1,0,C,0^FDGW:${grossWeight}^FS`);
+  lines.push(lc(80, '^A0N,10,8', `GW:${grossWeight}`));
+  lines.push(`^FO3,80^A0N,10,8^FB${FACE},1,0,C,0^FDGW:${grossWeight}^FS`);
 
-  lines.push(lc(89, '^A0N,8,7', sku));
+  lines.push(lc(92, '^A0N,8,7', sku));
 
   // ── DOTTED FOLD LINE at x=HALF(220) ──────────────────────────────────────
   for (let y = 0; y < LL; y += 8) {
@@ -85,11 +85,11 @@ function generateZPL(item) {
   }
 
   // ── FACE 2 (back) — details side ──────────────────────────────────────────
-  lines.push(rl(3,  '^A0N,9,7',  sku));
-  lines.push(rl(14, '^A0N,13,10', itemName));
-  lines.push(rl(30, '^A0N,10,8', metalLine));
+  lines.push(rl(11, '^A0N,9,7',  sku));
+  lines.push(rl(22, '^A0N,13,10', itemName));
+  lines.push(rl(38, '^A0N,10,8', metalLine));
 
-  let ny = 44;
+  let ny = 52;
   if (hasStone) { lines.push(rl(ny, '^A0N,10,8', stoneLine)); ny += 13; }
   if (dateDisplay) lines.push(rl(ny,  '^A0N,9,7', dateDisplay));
   if (category)    lines.push(rr(ny,  '^A0N,9,7', category));

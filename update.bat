@@ -11,6 +11,8 @@ echo.
 
 echo  [1/4] Stopping the system...
 taskkill /F /IM node.exe >nul 2>&1
+timeout /t 4 /nobreak >nul
+taskkill /F /IM node.exe >nul 2>&1
 timeout /t 2 /nobreak >nul
 
 echo  [2/4] Backing up your data...

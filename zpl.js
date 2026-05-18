@@ -3,27 +3,24 @@
 /**
  * ZPL II label for Zebra GC420t — fold-over jewellery tag loaded LANDSCAPE.
  *
- * PW=800 (100mm) matches physical media so the printer does NOT centre-offset.
- * Neck (loop/hole) = first 20mm (160 dots). Box = 55mm × 13mm (440 × 104).
+ * Neck is on the RIGHT — box left edge = x=0. PW=800 prevents centering offset.
+ * Box = 55mm × 13mm (440 × 104 dots). Fold at x=220 (exact centre).
  *
- * NECK      x=0–159    (20mm)   — blank, loop/hole area
- * FACE 1    x=160–379  (27.5mm) — shop name, barcode, GW
- * FOLD LINE x=380               — dotted vertical line
- * FACE 2    x=383–599  (27.5mm) — SKU, name, metal/purity, stone, date/category
+ * FACE 1    x=0–219    (27.5mm) — shop name, barcode, GW
+ * FOLD LINE x=220               — dotted vertical line
+ * FACE 2    x=223–439  (27.5mm) — SKU, name, metal/purity, stone, date/category
+ * NECK      x=440+              — loop/hole area, no printing
  */
 function generateZPL(item) {
   const PW   = 800;   // 100mm — must equal physical media width to avoid centering
   const LL   = 104;   // 13mm tall (1.3cm box height at 203dpi)
-  const NECK = 80;    // 10mm neck — box starts here (tune by ±8 dots per mm)
-  const BOX  = 440;   // 55mm box (both faces)
-  const FACE = 217;   // usable dots per half-face
-  const HALF = NECK + 220;       // = 300, fold at box midpoint
-  const L2   = HALF + 3;        // = 303, Face 2 start
-  const BOXR = NECK + BOX;      // = 520, box right edge (for right-alignment)
+  const HALF = 220;   // fold line at exact box midpoint (27.5mm)
+  const L2   = HALF + 3;   // = 223, Face 2 start
+  const FACE = HALF - 3;   // = 217, usable dots per half-face
 
-  const lc  = (y, f, t) => `^FO${NECK},${y}${f}^FB${FACE},1,0,C,0^FD${t}^FS`;
+  const lc  = (y, f, t) => `^FO2,${y}${f}^FB${FACE},1,0,C,0^FD${t}^FS`;
   const rl  = (y, f, t) => `^FO${L2},${y}${f}^FD${t}^FS`;
-  const rr  = (y, f, t) => `^FO${L2},${y}${f}^FB${BOXR - L2 - 2},1,0,R,0^FD${t}^FS`;
+  const rr  = (y, f, t) => `^FO${L2},${y}${f}^FB${440 - L2 - 2},1,0,R,0^FD${t}^FS`;
 
   function barcodePayload(skuStr) {
     const m = skuStr.match(/JS-(\d{8})-(\d+)/);
@@ -70,19 +67,19 @@ function generateZPL(item) {
   lines.push(`^LL${LL}`);
   lines.push('^LH0,0');
 
-  // ── FACE 1 (front) — x=NECK(160) to x=HALF(380) ─────────────────────────
+  // ── FACE 1 (front) — x=0 to x=220 ──────────────────────────────────────
   lines.push(lc(2, '^A0N,9,7', 'M.BAJRANGLAL SONS'));
 
-  // Barcode: 56-dot height, starts just inside box edge
-  lines.push(`^FO${NECK+4},13^BY1,2^BCN,56,N,N,N^FD${bc}^FS`);
+  // Barcode starts at x=4 (0.5mm from left edge)
+  lines.push(`^FO4,13^BY1,2^BCN,56,N,N,N^FD${bc}^FS`);
 
   // GW bold (double-print for weight)
   lines.push(lc(76, '^A0N,10,8', `GW:${grossWeight}`));
-  lines.push(`^FO${NECK+3},76^A0N,10,8^FB${FACE},1,0,C,0^FDGW:${grossWeight}^FS`);
+  lines.push(`^FO3,76^A0N,10,8^FB${FACE},1,0,C,0^FDGW:${grossWeight}^FS`);
 
   lines.push(lc(89, '^A0N,8,7', sku));
 
-  // ── DOTTED FOLD LINE at x=HALF(380) ──────────────────────────────────────
+  // ── DOTTED FOLD LINE at x=HALF(220) ──────────────────────────────────────
   for (let y = 0; y < LL; y += 8) {
     if (y + 4 <= LL) lines.push(`^FO${HALF},${y}^GB1,4,1^FS`);
   }

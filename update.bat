@@ -10,7 +10,9 @@ echo  ================================================
 echo.
 
 echo  [1/4] Stopping the system...
-pm2 stop jeweller-stock >nul 2>&1
+for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| find "LISTENING" ^| find ":3100"') do (
+    taskkill /f /pid %%a >nul 2>&1
+)
 timeout /t 2 /nobreak >nul
 
 echo  [2/4] Backing up your data...
@@ -61,7 +63,6 @@ if errorlevel 1 (
   echo.
   echo  [!] Some files failed to download. Your data is safe — system will restart as-is.
   echo      Check your internet connection or contact IntelliTech Solutions.
-  pm2 start ecosystem.config.js >nul 2>&1
   pause
   exit /b 1
 )
@@ -69,7 +70,7 @@ if errorlevel 1 (
 call npm install --omit=dev >nul 2>&1
 
 echo  [4/4] Restarting the system...
-pm2 start ecosystem.config.js >nul 2>&1
+start "M. Bajranglal Sons Stock" node server.js
 
 timeout /t 3 /nobreak >nul
 echo.

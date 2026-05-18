@@ -68,7 +68,7 @@ function generateZPL(item) {
   lines.push('^LH0,0');
 
   // ── FACE 1 (front) — x=0 to x=220 ──────────────────────────────────────
-  lines.push(lc(10, '^A0N,9,7', 'M.BAJRANGLAL SONS'));
+  lines.push(lc(10, '^A0N,9,7', 'MBJ TEST v8'));
 
   // Barcode at y=21 gives 8-dot top margin clear of label edge
   lines.push(`^FO4,21^BY1,2^BCN,56,N,N,N^FD${bc}^FS`);

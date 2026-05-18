@@ -68,16 +68,16 @@ function generateZPL(item) {
   lines.push('^LH0,0');
 
   // ── FACE 1 (front) — x=0 to x=220 ──────────────────────────────────────
-  lines.push(lc(10, '^A0N,9,7', 'MBJ TEST v8'));
+  // y=30 clears the printer's physical top margin (~20-25 dots)
+  lines.push(lc(30, '^A0N,9,7', 'M.BAJRANGLAL SONS'));
 
-  // Barcode at y=21 gives 8-dot top margin clear of label edge
-  lines.push(`^FO4,21^BY1,2^BCN,56,N,N,N^FD${bc}^FS`);
+  lines.push(`^FO4,42^BY1,2^BCN,44,N,N,N^FD${bc}^FS`);
 
   // GW bold (double-print for weight)
-  lines.push(lc(80, '^A0N,10,8', `GW:${grossWeight}`));
-  lines.push(`^FO3,80^A0N,10,8^FB${FACE},1,0,C,0^FDGW:${grossWeight}^FS`);
+  lines.push(lc(89, '^A0N,10,8', `GW:${grossWeight}`));
+  lines.push(`^FO3,89^A0N,10,8^FB${FACE},1,0,C,0^FDGW:${grossWeight}^FS`);
 
-  lines.push(lc(92, '^A0N,8,7', sku));
+  lines.push(lc(102, '^A0N,8,7', sku));
 
   // ── DOTTED FOLD LINE at x=HALF(220) ──────────────────────────────────────
   for (let y = 0; y < LL; y += 8) {
@@ -85,11 +85,11 @@ function generateZPL(item) {
   }
 
   // ── FACE 2 (back) — details side ──────────────────────────────────────────
-  lines.push(rl(11, '^A0N,9,7',  sku));
-  lines.push(rl(22, '^A0N,13,10', itemName));
-  lines.push(rl(38, '^A0N,10,8', metalLine));
+  lines.push(rl(30, '^A0N,9,7',  sku));
+  lines.push(rl(42, '^A0N,13,10', itemName));
+  lines.push(rl(58, '^A0N,10,8', metalLine));
 
-  let ny = 52;
+  let ny = 71;
   if (hasStone) { lines.push(rl(ny, '^A0N,10,8', stoneLine)); ny += 13; }
   if (dateDisplay) lines.push(rl(ny,  '^A0N,9,7', dateDisplay));
   if (category)    lines.push(rr(ny,  '^A0N,9,7', category));

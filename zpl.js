@@ -71,16 +71,16 @@ function generateZPL(item) {
   lines.push('^LH0,0');
 
   // ── FACE 1 (front) — barcode side ─────────────────────────────────────────
-  lines.push(lc(3,  '^A0N,11,8', 'M.BAJRANGLAL SONS'));
+  lines.push(lc(3, '^A0N,10,8', 'M.BAJRANGLAL SONS'));
 
-  // Code 128C, 12-digit numeric — ~242 dots wide, fits within 313-dot face
-  lines.push(`^FO${L1 + 5},16^BY1,3,72^BCN,72,N,N,N^FD${bc}^FS`);
+  // Smaller barcode: BY1,2 height=48 (~6mm) — fits comfortably in 15mm height
+  lines.push(`^FO${L1 + 5},16^BY1,2^BCN,48,N,N,N^FD${bc}^FS`);
 
   // GW bold (double-print)
-  lines.push(lc(94, '^A0N,11,8', `GW:${grossWeight}`));
-  lines.push(`^FO${L1 + 1},94^A0N,11,8^FB${FACE},1,0,C,0^FDGW:${grossWeight}^FS`);
+  lines.push(lc(72, '^A0N,11,8', `GW:${grossWeight}`));
+  lines.push(`^FO${L1 + 1},72^A0N,11,8^FB${FACE},1,0,C,0^FDGW:${grossWeight}^FS`);
 
-  lines.push(lc(107, '^A0N,9,7', sku));
+  lines.push(lc(86, '^A0N,9,7', sku));
 
   // ── FOLD LINE ──────────────────────────────────────────────────────────────
   lines.push(`^FO${HALF},0^GB1,${LL},1^FS`);

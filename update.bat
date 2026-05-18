@@ -19,64 +19,19 @@ set BACKUP_NAME=backups\backup_%date:~-4%-%date:~3,2%-%date:~0,2%_%time:~0,2%%ti
 copy /Y "jeweller-stock.db" "%BACKUP_NAME%" >nul
 echo      Backed up to: %BACKUP_NAME%
 
-echo  [3/4] Downloading latest files from GitHub...
-echo      Installing to: %~dp0
-echo.
-powershell -ExecutionPolicy Bypass -Command "& {
-    $base = 'https://raw.githubusercontent.com/vansh539/jeweller-stock-mbj-/main'
-    $dest = '%~dp0'.TrimEnd('\')
+echo  [3/4] Downloading latest files...
 
-    $files = @(
-        'server.js',
-        'db.js',
-        'zpl.js',
-        'ecosystem.config.js',
-        'package.json',
-        'public/app.js',
-        'public/index.html',
-        'public/style.css',
-        'public/scan.html',
-        'public/invoice-print.html',
-        'public/walkthrough.html',
-        'public/expired.html'
-    )
-
-    $failed = 0
-    foreach ($f in $files) {
-        try {
-            $url = $base + '/' + $f
-            $out = Join-Path $dest $f
-            $dir = Split-Path $out
-            if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir | Out-Null }
-            Invoke-WebRequest -Uri $url -OutFile $out -UseBasicParsing
-            Write-Host ('  Updated: ' + $f)
-        } catch {
-            Write-Host ('  FAILED:  ' + $f + ' — ' + $_.Exception.Message)
-            $failed++
-        }
-    }
-    if ($failed -gt 0) { exit 1 }
-}"
-
-echo.
-echo  --- Download result: errorlevel=%errorlevel% ---
-echo  --- Checking files in: %~dp0 ---
-dir "%~dp0server.js" 2>&1
-dir "%~dp0public\style.css" 2>&1
-echo.
-pause
+powershell -ExecutionPolicy Bypass -Command "& { $base = 'https://raw.githubusercontent.com/vansh539/jeweller-stock-mbj-/main'; $dest = (Get-Location).Path; $files = @('server.js','db.js','zpl.js','ecosystem.config.js','package.json','public/app.js','public/index.html','public/style.css','public/scan.html','public/invoice-print.html','public/walkthrough.html','public/expired.html'); $failed = 0; foreach ($f in $files) { try { $url = $base + '/' + $f; $out = Join-Path $dest $f; $dir = Split-Path $out; if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir | Out-Null }; Invoke-WebRequest -Uri $url -OutFile $out -UseBasicParsing; Write-Host ('  Updated: ' + $f) } catch { Write-Host ('  FAILED:  ' + $f + ' - ' + $_.Exception.Message); $failed++ } }; if ($failed -gt 0) { exit 1 } }"
 
 if errorlevel 1 (
   echo.
-  echo  [!] Some files failed to download. Your data is safe — system will restart as-is.
-  echo      Check your internet connection or contact IntelliTech Solutions.
+  echo  [!] Download failed. Your data is safe. Please check internet and try again.
   pause
   exit /b 1
 )
 
-call npm install --omit=dev >nul 2>&1
-
 echo  [4/4] Restarting the system...
+call npm install --omit=dev >nul 2>&1
 start "M. Bajranglal Sons Stock" node server.js
 
 timeout /t 3 /nobreak >nul

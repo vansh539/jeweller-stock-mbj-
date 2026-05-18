@@ -53,7 +53,7 @@ timeout /t 3 /nobreak >nul
 echo.
 echo  ================================================
 echo   Update complete! System is running.
-echo   Open your browser: http://localhost:3100
+echo   Open your browser: http://localhost:3000
 echo  ================================================
 echo.
 echo  Your data (jeweller-stock.db) was not affected.

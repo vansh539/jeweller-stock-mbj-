@@ -13,15 +13,16 @@
  * No MRP on tag.
  */
 function generateZPL(item) {
-  const PW   = 800;   // 100mm across printhead
-  const LL   = 120;   // 15mm feed direction
-  const HALF = 400;   // fold x — exactly halfway
-  const L2   = HALF + 4;
-  const FACE = HALF - 2;  // usable width per half (~398 dots)
+  // Printable rectangle: 55mm × 13mm at 203dpi
+  const PW   = 440;   // 55mm wide  (8 dots/mm × 55 = 440)
+  const LL   = 104;   // 13mm tall  (8 dots/mm × 13 = 104)
+  const HALF = 220;   // exact midpoint — fold line x
+  const L2   = HALF + 3;
+  const FACE = HALF - 3;  // usable width per half (~217 dots)
 
-  const lc  = (y, f, t) => `^FO2,${y}${f}^FB${FACE},1,0,C,0^FD${t}^FS`;          // face1 centred
-  const rl  = (y, f, t) => `^FO${L2},${y}${f}^FD${t}^FS`;                         // face2 left
-  const rr  = (y, f, t) => `^FO${L2},${y}${f}^FB${PW - L2 - 3},1,0,R,0^FD${t}^FS`; // face2 right
+  const lc  = (y, f, t) => `^FO2,${y}${f}^FB${FACE},1,0,C,0^FD${t}^FS`;
+  const rl  = (y, f, t) => `^FO${L2},${y}${f}^FD${t}^FS`;
+  const rr  = (y, f, t) => `^FO${L2},${y}${f}^FB${PW - L2 - 2},1,0,R,0^FD${t}^FS`;
 
   function barcodePayload(skuStr) {
     const m = skuStr.match(/JS-(\d{8})-(\d+)/);
@@ -68,19 +69,19 @@ function generateZPL(item) {
   lines.push(`^LL${LL}`);
   lines.push('^LH0,0');
 
-  // ── FACE 1 (front) — starts at x=0 ───────────────────────────────────────
-  lines.push(lc(3, '^A0N,10,8', 'M.BAJRANGLAL SONS'));
+  // ── FACE 1 (front) — x=0 to x=220 ───────────────────────────────────────
+  lines.push(lc(2, '^A0N,9,7', 'M.BAJRANGLAL SONS'));
 
-  // Barcode: BY1,2 height=48 — fits within 15mm height, starts from left edge
-  lines.push(`^FO5,16^BY1,2^BCN,48,N,N,N^FD${bc}^FS`);
+  // Barcode: fits within ~217-dot face width; height=56 leaves room for text above/below
+  lines.push(`^FO4,13^BY1,2^BCN,56,N,N,N^FD${bc}^FS`);
 
   // GW bold (double-print)
-  lines.push(lc(72, '^A0N,11,8', `GW:${grossWeight}`));
-  lines.push(`^FO3,72^A0N,11,8^FB${FACE},1,0,C,0^FDGW:${grossWeight}^FS`);
+  lines.push(lc(76, '^A0N,10,8', `GW:${grossWeight}`));
+  lines.push(`^FO3,76^A0N,10,8^FB${FACE},1,0,C,0^FDGW:${grossWeight}^FS`);
 
-  lines.push(lc(86, '^A0N,9,7', sku));
+  lines.push(lc(89, '^A0N,8,7', sku));
 
-  // ── DOTTED FOLD LINE at exactly x=400 ────────────────────────────────────
+  // ── DOTTED FOLD LINE at x=220 (exactly half of 440) ──────────────────────
   for (let y = 0; y < LL; y += 8) {
     if (y + 4 <= LL) lines.push(`^FO${HALF},${y}^GB1,4,1^FS`);
   }

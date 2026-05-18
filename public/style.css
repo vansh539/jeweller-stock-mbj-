@@ -820,28 +820,9 @@ a:hover { text-decoration: underline; }
   overflow: hidden;
 }
 
-/* Neck / loop area — ~20mm, no printing */
-.lm-neck {
-  width: 75px;
-  flex-shrink: 0;
-  background: #f0f0ee;
-  border-right: 1px dashed #bbb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.lm-neck::after {
-  content: '';
-  display: block;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 1.5px solid #aaa;
-}
-
 /* Face 1 — front (barcode side) */
 .lm-left {
-  width: 150px;
+  width: 192px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -850,10 +831,10 @@ a:hover { text-decoration: underline; }
   overflow: hidden;
 }
 
-/* Vertical fold line */
+/* Dotted fold line */
 .lm-fold {
   width: 1px;
-  background: #444;
+  background: repeating-linear-gradient(to bottom, #555 0px, #555 4px, transparent 4px, transparent 8px);
   align-self: stretch;
   flex-shrink: 0;
 }

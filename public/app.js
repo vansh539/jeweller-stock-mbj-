@@ -186,6 +186,9 @@ function getRateForPurity(metal, purity) {
 }
 
 function recalcAll(prefix) {
+  // Invoice prefix has no gross weight element — delegate to calcInvoice
+  if (prefix === 'inv') { calcInvoice(); return; }
+
   // ── 1. Net weight (gross g − stone ct × 0.2 g/ct) ──
   const gross    = parseFloat($(`${prefix}-gross`)?.value) || 0;
   const stones   = getStonesFromForm(prefix);
@@ -905,11 +908,12 @@ const invoiceModal = $('invoice-modal');
 const invoiceForm  = $('invoice-form');
 
 function calcInvoice() {
-  const rate    = Number($('inv-rate').value)        || 0;
-  const weight  = Number($('inv-weight').value)      || 0;
-  const wPct    = Number($('inv-wastage').value)     || 0;
-  const making  = Number($('inv-making').value)      || 0;
-  const stone   = Number($('inv-stone-price').value) || 0;
+  const rate    = Number($('inv-rate').value)    || 0;
+  const weight  = Number($('inv-weight').value)  || 0;
+  const wPct    = Number($('inv-wastage').value) || 0;
+  const making  = Number($('inv-making').value)  || 0;
+  const stones  = getStonesFromForm('inv');
+  const stone   = stones.reduce((s, st) => s + (st.pieces || 1) * (st.weight || 0) * (st.price_per_ct || 0), 0);
 
   const gold    = rate * weight;
   const wastage = (wPct / 100) * gold;
@@ -918,15 +922,24 @@ function calcInvoice() {
   const fmt = v => v > 0 ? formatINR(v) : '—';
   $('calc-gold').textContent    = fmt(gold);
   $('calc-wastage').textContent = wPct > 0 ? fmt(wastage) : '—';
-  $('calc-making').textContent  = fmt(making);
-  $('calc-stone').textContent   = fmt(stone);
+  $('calc-making').textContent  = making > 0 ? fmt(making) : '—';
+  $('calc-stone').textContent   = stone > 0 ? fmt(stone) : '—';
   $('calc-total').textContent   = total > 0 ? formatINR(total) : '—';
 }
 
-['inv-rate','inv-weight','inv-wastage','inv-making','inv-stone-price'].forEach(id => {
+function calcInvMaking() {
+  const makingRate = Number($('inv-making-rate').value) || 0;
+  const weight     = Number($('inv-weight').value)      || 0;
+  $('inv-making').value = (makingRate > 0 && weight > 0) ? Math.round(weight * makingRate) : '';
+  calcInvoice();
+}
+
+['inv-rate','inv-wastage'].forEach(id => {
   const el = $(id);
   if (el) el.addEventListener('input', calcInvoice);
 });
+$('inv-weight').addEventListener('input', calcInvMaking);
+$('inv-making-rate').addEventListener('input', calcInvMaking);
 
 async function openInvoiceModal(sku) {
   const { ok, data } = await apiFetch(`/api/items/${encodeURIComponent(sku)}`);
@@ -940,9 +953,16 @@ async function openInvoiceModal(sku) {
   $('inv-rate').value         = '';
   $('inv-weight').value       = item.net_weight  != null ? item.net_weight  : '';
   $('inv-wastage').value      = item.wastage_pct != null ? item.wastage_pct : '';
+  $('inv-making-rate').value  = '';
   $('inv-making').value       = item.making_charges != null ? item.making_charges : '';
-  $('inv-stone-price').value  = item.stone_price != null ? item.stone_price : '';
   $('inv-notes').value        = '';
+
+  clearStoneRows('inv');
+  const stonesData = item.stones_json
+    ? (typeof item.stones_json === 'string' ? JSON.parse(item.stones_json) : item.stones_json)
+    : [];
+  stonesData.forEach(s => addStoneRow('inv', s));
+
   showError('invoice-error', '');
   calcInvoice();
 
@@ -970,9 +990,9 @@ invoiceForm.addEventListener('submit', async e => {
     customer_phone: $('inv-phone').value.trim() || null,
     per_gram_rate:  Number($('inv-rate').value),
     weight_used:    Number($('inv-weight').value),
-    wastage_pct:    Number($('inv-wastage').value)     || 0,
-    making_charges: Number($('inv-making').value)      || 0,
-    stone_price:    Number($('inv-stone-price').value) || 0,
+    wastage_pct:    Number($('inv-wastage').value) || 0,
+    making_charges: Number($('inv-making').value)  || 0,
+    stone_price:    Math.round(getStonesFromForm('inv').reduce((s, st) => s + (st.pieces || 1) * (st.weight || 0) * (st.price_per_ct || 0), 0)),
     notes:          $('inv-notes').value.trim() || null,
   };
 

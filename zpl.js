@@ -15,14 +15,12 @@
 function generateZPL(item) {
   const PW   = 800;   // 100mm across printhead
   const LL   = 120;   // 15mm feed direction
-  const NECK = 160;   // neck end — no printing left of this x
-  const L1   = NECK + 3;          // face 1 left edge (with small margin)
-  const HALF = 480;               // fold x position
-  const L2   = HALF + 4;          // face 2 left edge
-  const FACE = HALF - L1;         // face width in dots (~313)
+  const HALF = 400;   // fold x — exactly halfway
+  const L2   = HALF + 4;
+  const FACE = HALF - 2;  // usable width per half (~398 dots)
 
-  const lc  = (y, f, t) => `^FO${L1},${y}${f}^FB${FACE},1,0,C,0^FD${t}^FS`;  // face1 centred
-  const rl  = (y, f, t) => `^FO${L2},${y}${f}^FD${t}^FS`;                     // face2 left
+  const lc  = (y, f, t) => `^FO2,${y}${f}^FB${FACE},1,0,C,0^FD${t}^FS`;          // face1 centred
+  const rl  = (y, f, t) => `^FO${L2},${y}${f}^FD${t}^FS`;                         // face2 left
   const rr  = (y, f, t) => `^FO${L2},${y}${f}^FB${PW - L2 - 3},1,0,R,0^FD${t}^FS`; // face2 right
 
   function barcodePayload(skuStr) {
@@ -70,20 +68,22 @@ function generateZPL(item) {
   lines.push(`^LL${LL}`);
   lines.push('^LH0,0');
 
-  // ── FACE 1 (front) — barcode side ─────────────────────────────────────────
+  // ── FACE 1 (front) — starts at x=0 ───────────────────────────────────────
   lines.push(lc(3, '^A0N,10,8', 'M.BAJRANGLAL SONS'));
 
-  // Smaller barcode: BY1,2 height=48 (~6mm) — fits comfortably in 15mm height
-  lines.push(`^FO${L1 + 5},16^BY1,2^BCN,48,N,N,N^FD${bc}^FS`);
+  // Barcode: BY1,2 height=48 — fits within 15mm height, starts from left edge
+  lines.push(`^FO5,16^BY1,2^BCN,48,N,N,N^FD${bc}^FS`);
 
   // GW bold (double-print)
   lines.push(lc(72, '^A0N,11,8', `GW:${grossWeight}`));
-  lines.push(`^FO${L1 + 1},72^A0N,11,8^FB${FACE},1,0,C,0^FDGW:${grossWeight}^FS`);
+  lines.push(`^FO3,72^A0N,11,8^FB${FACE},1,0,C,0^FDGW:${grossWeight}^FS`);
 
   lines.push(lc(86, '^A0N,9,7', sku));
 
-  // ── FOLD LINE ──────────────────────────────────────────────────────────────
-  lines.push(`^FO${HALF},0^GB1,${LL},1^FS`);
+  // ── DOTTED FOLD LINE at exactly x=400 ────────────────────────────────────
+  for (let y = 0; y < LL; y += 8) {
+    if (y + 4 <= LL) lines.push(`^FO${HALF},${y}^GB1,4,1^FS`);
+  }
 
   // ── FACE 2 (back) — details side ──────────────────────────────────────────
   lines.push(rl(3,  '^A0N,9,7',  sku));

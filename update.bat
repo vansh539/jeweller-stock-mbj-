@@ -1,10 +1,10 @@
 @echo off
-title M. Bajranglal Sons — System Updater
+title M. Bajranglal Sons - System Updater
 cd /d "%~dp0"
 
 echo.
 echo  ================================================
-echo   M. Bajranglal Sons Stock System — Updater
+echo   M. Bajranglal Sons Stock System - Updater
 echo   Powered by IntelliTech Solutions
 echo  ================================================
 echo.
@@ -20,12 +20,25 @@ copy /Y "jeweller-stock.db" "%BACKUP_NAME%" >nul
 echo      Backed up to: %BACKUP_NAME%
 
 echo  [3/4] Downloading latest files...
+set BASE=https://raw.githubusercontent.com/vansh539/jeweller-stock-mbj-/main
 
-powershell -ExecutionPolicy Bypass -Command "& { $base = 'https://raw.githubusercontent.com/vansh539/jeweller-stock-mbj-/main'; $dest = (Get-Location).Path; $files = @('server.js','db.js','zpl.js','ecosystem.config.js','package.json','public/app.js','public/index.html','public/style.css','public/scan.html','public/invoice-print.html','public/walkthrough.html','public/expired.html'); $failed = 0; foreach ($f in $files) { try { $url = $base + '/' + $f; $out = Join-Path $dest $f; $dir = Split-Path $out; if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir | Out-Null }; Invoke-WebRequest -Uri $url -OutFile $out -UseBasicParsing; Write-Host ('  Updated: ' + $f) } catch { Write-Host ('  FAILED:  ' + $f + ' - ' + $_.Exception.Message); $failed++ } }; if ($failed -gt 0) { exit 1 } }"
+curl -s -L -o "server.js"                    "%BASE%/server.js"
+curl -s -L -o "db.js"                        "%BASE%/db.js"
+curl -s -L -o "zpl.js"                       "%BASE%/zpl.js"
+curl -s -L -o "ecosystem.config.js"          "%BASE%/ecosystem.config.js"
+curl -s -L -o "package.json"                 "%BASE%/package.json"
+if not exist "public" mkdir public
+curl -s -L -o "public\app.js"                "%BASE%/public/app.js"
+curl -s -L -o "public\index.html"            "%BASE%/public/index.html"
+curl -s -L -o "public\style.css"             "%BASE%/public/style.css"
+curl -s -L -o "public\scan.html"             "%BASE%/public/scan.html"
+curl -s -L -o "public\invoice-print.html"    "%BASE%/public/invoice-print.html"
+curl -s -L -o "public\walkthrough.html"      "%BASE%/public/walkthrough.html"
+curl -s -L -o "public\expired.html"          "%BASE%/public/expired.html"
 
 if errorlevel 1 (
   echo.
-  echo  [!] Download failed. Your data is safe. Please check internet and try again.
+  echo  [!] Download failed. Check internet connection and try again.
   pause
   exit /b 1
 )

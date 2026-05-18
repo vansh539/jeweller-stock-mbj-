@@ -21,7 +21,7 @@ echo      Backed up to: %BACKUP_NAME%
 
 echo  [3/4] Downloading latest files...
 powershell -Command "& {
-    $base = 'https://raw.githubusercontent.com/vansh539/jeweller-stock(mbj)/main'
+    $base = 'https://raw.githubusercontent.com/vansh539/jeweller-stock-mbj-/main'
     $dest = Split-Path -Parent $MyInvocation.ScriptName
     if (-not $dest) { $dest = Get-Location }
 

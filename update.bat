@@ -19,8 +19,9 @@ set BACKUP_NAME=backups\backup_%date:~-4%-%date:~3,2%-%date:~0,2%_%time:~0,2%%ti
 copy /Y "jeweller-stock.db" "%BACKUP_NAME%" >nul
 echo      Backed up to: %BACKUP_NAME%
 
-echo  [3/4] Downloading latest files...
-echo      Folder: %~dp0
+echo  [3/4] Downloading latest files from GitHub...
+echo      Installing to: %~dp0
+echo.
 powershell -ExecutionPolicy Bypass -Command "& {
     $base = 'https://raw.githubusercontent.com/vansh539/jeweller-stock-mbj-/main'
     $dest = '%~dp0'.TrimEnd('\')
@@ -56,6 +57,14 @@ powershell -ExecutionPolicy Bypass -Command "& {
     }
     if ($failed -gt 0) { exit 1 }
 }"
+
+echo.
+echo  --- Download result: errorlevel=%errorlevel% ---
+echo  --- Checking files in: %~dp0 ---
+dir "%~dp0server.js" 2>&1
+dir "%~dp0public\style.css" 2>&1
+echo.
+pause
 
 if errorlevel 1 (
   echo.

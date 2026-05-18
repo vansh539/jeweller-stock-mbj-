@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>M. Bajranglal Sons Gems &amp; Jewels — Stock Management</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════════ NAVBAR -->
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <span class="brand-icon">♦</span>
+      <span class="brand-name">M. Bajranglal Sons</span>
+      <span class="brand-sep">—</span>
+      <span class="brand-sub">Gems &amp; Jewels — Stock</span>
+    </div>
+    <div class="navbar-right">
+      <a href="/scan.html" class="navbar-help-link">📷 Scan</a>
+      <a href="/walkthrough.html" class="navbar-help-link">? How it works</a>
+      <span class="nav-date" id="nav-date"></span>
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════ GOLD RATES STRIP -->
+  <div class="gold-strip" id="gold-strip">
+    <span class="gold-strip-label">Today's Gold Rates — per gram (incl. 3% GST)</span>
+    <div class="gold-rates">
+      <div class="gold-rate-pill">
+        <span class="gr-karat">24K</span>
+        <span class="gr-price" id="gr-24k">—</span>
+      </div>
+      <div class="gold-rate-pill">
+        <span class="gr-karat">22K</span>
+        <span class="gr-price" id="gr-22k">—</span>
+      </div>
+      <div class="gold-rate-pill">
+        <span class="gr-karat">18K</span>
+        <span class="gr-price" id="gr-18k">—</span>
+      </div>
+    </div>
+    <span class="gold-strip-meta" id="gold-strip-meta">Fetching…</span>
+    <button class="gold-refresh-btn" id="gold-refresh-btn" title="Refresh rates">↻</button>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════ STATS BAR -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <span class="stat-label">Total Items</span>
+      <span class="stat-value" id="stat-total">—</span>
+    </div>
+    <div class="stat-card stat-green">
+      <span class="stat-label">In Stock</span>
+      <span class="stat-value" id="stat-instock">—</span>
+    </div>
+    <div class="stat-card stat-grey">
+      <span class="stat-label">Sold</span>
+      <span class="stat-value" id="stat-sold">—</span>
+    </div>
+    <div class="stat-card stat-yellow">
+      <span class="stat-label">Reserved</span>
+      <span class="stat-value" id="stat-reserved">—</span>
+    </div>
+    <div class="stat-card stat-red">
+      <span class="stat-label">On Repair</span>
+      <span class="stat-value" id="stat-repair">—</span>
+    </div>
+    <div class="stat-card stat-gold">
+      <span class="stat-label">Stock Value (MRP)</span>
+      <span class="stat-value" id="stat-value">—</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ SCAN BAR -->
+  <div class="scan-bar">
+    <div class="scan-inner">
+      <span class="scan-icon">⬛</span>
+      <input
+        type="text"
+        id="scan-input"
+        class="scan-input"
+        placeholder="Scan or type SKU (e.g. JS-20260513-0001)…"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button class="btn btn-gold scan-clear" id="scan-clear" title="Clear">✕</button>
+    </div>
+    <div class="scan-hint" id="scan-hint">Press Enter to search • SKU pattern: JS-YYYYMMDD-XXXX</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ TABS -->
+  <div class="tabs-wrapper">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="stock">All Stock</button>
+      <button class="tab-btn" data-tab="add">Add New Item</button>
+      <button class="tab-btn" data-tab="reports">Reports</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ TAB: ALL STOCK -->
+  <div class="tab-content active" id="tab-stock">
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <input type="text" id="filter-search" class="filter-input" placeholder="Search name, SKU, supplier…" />
+
+      <select id="filter-status" class="filter-select">
+        <option value="">All Statuses</option>
+        <option>In Stock</option>
+        <option>Sold</option>
+        <option>Reserved</option>
+        <option>On Repair</option>
+      </select>
+
+      <select id="filter-category" class="filter-select">
+        <option value="">All Categories</option>
+        <option>Necklace</option>
+        <option>Ring</option>
+        <option>Bangle</option>
+        <option>Earrings</option>
+        <option>Bracelet</option>
+        <option>Pendant</option>
+        <option>Brooch</option>
+        <option>Other</option>
+      </select>
+
+      <select id="filter-metal" class="filter-select">
+        <option value="">All Metals</option>
+        <option>Gold</option>
+        <option>Silver</option>
+        <option>Platinum</option>
+        <option>Rose Gold</option>
+      </select>
+
+      <button class="btn btn-secondary" id="filter-reset">Reset</button>
+      <span class="filter-count" id="filter-count"></span>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrapper">
+      <table class="items-table" id="items-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Description</th>
+            <th>Category</th>
+            <th>Metal / Purity</th>
+            <th>Weight (g/n)</th>
+            <th>MRP</th>
+            <th>Status</th>
+            <th>Date Added</th>
+            <th class="th-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="items-tbody">
+          <tr class="loading-row">
+            <td colspan="9">Loading items…</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ TAB: ADD NEW ITEM -->
+  <div class="tab-content" id="tab-add">
+    <div class="form-card">
+      <h2 class="form-title">Add New Item</h2>
+      <form id="add-form" novalidate>
+        <div class="form-grid">
+
+          <div class="form-group">
+            <label for="f-category">Category <span class="req">*</span></label>
+            <input type="text" id="f-category" name="category" list="dl-f-category"
+                   placeholder="Select or type…" required autocomplete="off" />
+            <datalist id="dl-f-category"></datalist>
+          </div>
+
+          <div class="form-group">
+            <label for="f-metal">Metal <span class="req">*</span></label>
+            <input type="text" id="f-metal" name="metal" list="dl-f-metal"
+                   placeholder="Select or type…" required autocomplete="off" />
+            <datalist id="dl-f-metal"></datalist>
+          </div>
+
+          <div class="form-group">
+            <label for="f-purity">Purity <span class="req">*</span></label>
+            <input type="text" id="f-purity" name="purity" list="dl-f-purity"
+                   placeholder="Select or type…" required autocomplete="off" />
+            <datalist id="dl-f-purity"></datalist>
+          </div>
+
+          <div class="form-group">
+            <label for="f-gross">Gross Weight (g)</label>
+            <input type="number" id="f-gross" name="gross_weight" placeholder="e.g. 12.50" min="0" step="0.01" />
+          </div>
+
+          <div class="form-group form-group-full">
+            <div class="stones-header">
+              <label>Stone Details</label>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="addStoneRow('f')">+ Add Stone</button>
+            </div>
+            <div id="f-stones-container" class="stones-container">
+              <div class="stone-col-headers">
+                <span>Type</span><span>Pcs</span><span>Wt/pc (ct)</span><span>₹ / ct</span><span>Total</span><span></span>
+              </div>
+              <div class="stones-empty" id="f-stones-empty">No stones — click "+ Add Stone" to add</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="f-wastage">Wastage (%)</label>
+            <input type="number" id="f-wastage" name="wastage_pct" placeholder="e.g. 3.5" min="0" max="30" step="0.1" />
+          </div>
+
+          <div class="form-group">
+            <label for="f-making-rate">Making Rate (₹/g)</label>
+            <input type="number" id="f-making-rate" name="making_rate" placeholder="e.g. 300" min="0" step="1" />
+          </div>
+
+          <div class="form-group">
+            <label for="f-making">Making Charges (₹)</label>
+            <input type="number" id="f-making" name="making_charges" placeholder="Auto-calculated" min="0" step="1" readonly style="background:var(--bg-stripe);cursor:not-allowed;" />
+          </div>
+
+          <div class="form-group">
+            <label for="f-mrp">MRP (₹)</label>
+            <input type="number" id="f-mrp" name="mrp" placeholder="e.g. 85000" min="0" step="1" />
+          </div>
+
+          <div class="form-group">
+            <label for="f-supplier">Supplier</label>
+            <input type="text" id="f-supplier" name="supplier" placeholder="e.g. Mehta Gems" />
+          </div>
+
+          <div class="form-group">
+            <label for="f-status">Status</label>
+            <select id="f-status" name="status">
+              <option value="In Stock">In Stock</option>
+              <option value="Reserved">Reserved</option>
+              <option value="On Repair">On Repair</option>
+              <option value="Sold">Sold</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="f-net">Net Weight (g)</label>
+            <input type="number" id="f-net" name="net_weight" placeholder="e.g. 10.20" min="0" step="0.01" />
+          </div>
+
+          <div class="form-group form-group-full">
+            <label for="f-notes">Notes</label>
+            <textarea id="f-notes" name="notes" rows="3" placeholder="Optional remarks…"></textarea>
+          </div>
+
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary btn-lg">Add Item</button>
+          <button type="reset" class="btn btn-secondary btn-lg">Clear Form</button>
+        </div>
+        <div class="form-error" id="add-error"></div>
+        <div class="form-success" id="add-success"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ TAB: REPORTS -->
+  <div class="tab-content" id="tab-reports">
+    <div class="reports-grid">
+
+      <div class="report-card">
+        <h3>Inventory Summary</h3>
+        <div class="report-stats">
+          <div class="rs-row">
+            <span class="rs-label">Total Items</span>
+            <span class="rs-value" id="r-total">—</span>
+          </div>
+          <div class="rs-row rs-green">
+            <span class="rs-label">In Stock</span>
+            <span class="rs-value" id="r-instock">—</span>
+          </div>
+          <div class="rs-row rs-gold">
+            <span class="rs-label">In-Stock Value (MRP)</span>
+            <span class="rs-value" id="r-value">—</span>
+          </div>
+          <div class="rs-row rs-grey">
+            <span class="rs-label">Sold</span>
+            <span class="rs-value" id="r-sold">—</span>
+          </div>
+          <div class="rs-row rs-yellow">
+            <span class="rs-label">Reserved</span>
+            <span class="rs-value" id="r-reserved">—</span>
+          </div>
+          <div class="rs-row rs-red">
+            <span class="rs-label">On Repair</span>
+            <span class="rs-value" id="r-repair">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="report-card report-card-wide">
+        <h3>Category Breakdown</h3>
+        <table class="report-table" id="report-category-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Total</th>
+              <th>In Stock</th>
+              <th>Sold</th>
+              <th>Reserved</th>
+              <th>On Repair</th>
+              <th>Stock Value (MRP)</th>
+            </tr>
+          </thead>
+          <tbody id="report-tbody">
+            <tr><td colspan="7">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="report-card report-card-wide">
+        <h3>Metal Breakdown</h3>
+        <table class="report-table" id="report-metal-table">
+          <thead>
+            <tr>
+              <th>Metal</th>
+              <th>Total</th>
+              <th>In Stock</th>
+              <th>Sold</th>
+              <th>Stock Value (MRP)</th>
+            </tr>
+          </thead>
+          <tbody id="report-metal-tbody">
+            <tr><td colspan="5">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ EDIT MODAL -->
+  <div class="modal-overlay" id="edit-modal" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Edit Item</h2>
+        <button class="modal-close" id="edit-close" aria-label="Close">✕</button>
+      </div>
+      <form id="edit-form" novalidate>
+        <input type="hidden" id="e-sku" name="sku" />
+        <div class="form-grid">
+
+          <div class="form-group">
+            <label for="e-category">Category <span class="req">*</span></label>
+            <input type="text" id="e-category" name="category" list="dl-e-category"
+                   placeholder="Select or type…" required autocomplete="off" />
+            <datalist id="dl-e-category"></datalist>
+          </div>
+
+          <div class="form-group">
+            <label for="e-metal">Metal <span class="req">*</span></label>
+            <input type="text" id="e-metal" name="metal" list="dl-e-metal"
+                   placeholder="Select or type…" required autocomplete="off" />
+            <datalist id="dl-e-metal"></datalist>
+          </div>
+
+          <div class="form-group">
+            <label for="e-purity">Purity <span class="req">*</span></label>
+            <input type="text" id="e-purity" name="purity" list="dl-e-purity"
+                   placeholder="Select or type…" required autocomplete="off" />
+            <datalist id="dl-e-purity"></datalist>
+          </div>
+
+          <div class="form-group">
+            <label for="e-gross">Gross Weight (g)</label>
+            <input type="number" id="e-gross" name="gross_weight" min="0" step="0.01" />
+          </div>
+
+          <div class="form-group form-group-full">
+            <div class="stones-header">
+              <label>Stone Details</label>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="addStoneRow('e')">+ Add Stone</button>
+            </div>
+            <div id="e-stones-container" class="stones-container">
+              <div class="stone-col-headers">
+                <span>Type</span><span>Pcs</span><span>Wt/pc (ct)</span><span>₹ / ct</span><span>Total</span><span></span>
+              </div>
+              <div class="stones-empty" id="e-stones-empty">No stones — click "+ Add Stone" to add</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="e-wastage">Wastage (%)</label>
+            <input type="number" id="e-wastage" name="wastage_pct" min="0" max="30" step="0.1" />
+          </div>
+
+          <div class="form-group">
+            <label for="e-making-rate">Making Rate (₹/g)</label>
+            <input type="number" id="e-making-rate" name="making_rate" min="0" step="1" />
+          </div>
+
+          <div class="form-group">
+            <label for="e-making">Making Charges (₹)</label>
+            <input type="number" id="e-making" name="making_charges" min="0" step="1" readonly style="background:var(--bg-stripe);cursor:not-allowed;" />
+          </div>
+
+          <div class="form-group">
+            <label for="e-mrp">MRP (₹)</label>
+            <input type="number" id="e-mrp" name="mrp" min="0" step="1" />
+          </div>
+
+          <div class="form-group">
+            <label for="e-supplier">Supplier</label>
+            <input type="text" id="e-supplier" name="supplier" />
+          </div>
+
+          <div class="form-group">
+            <label for="e-status">Status</label>
+            <select id="e-status" name="status">
+              <option value="In Stock">In Stock</option>
+              <option value="Reserved">Reserved</option>
+              <option value="On Repair">On Repair</option>
+              <option value="Sold">Sold</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="e-net">Net Weight (g)</label>
+            <input type="number" id="e-net" name="net_weight" min="0" step="0.01" />
+          </div>
+
+          <div class="form-group form-group-full">
+            <label for="e-notes">Notes</label>
+            <textarea id="e-notes" name="notes" rows="3"></textarea>
+          </div>
+
+        </div>
+        <div class="form-error" id="edit-error"></div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Update Item</button>
+          <button type="button" class="btn btn-secondary" id="edit-cancel">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ PRINT MODAL -->
+  <div class="modal-overlay" id="print-modal" hidden>
+    <div class="modal-card modal-card-print">
+      <div class="modal-header">
+        <h2>Print Label — <span id="print-sku-title"></span></h2>
+        <button class="modal-close" id="print-close" aria-label="Close">✕</button>
+      </div>
+
+      <div class="print-body">
+        <div class="print-preview-section">
+          <h3 class="section-label">Label Preview</h3>
+          <div class="label-mockup" id="label-mockup">
+            <div class="lm-left">
+              <div class="lm-shop">M.BAJRANGLAL SONS</div>
+              <div class="lm-barcode"><svg id="barcode-svg"></svg></div>
+              <div class="lm-sku" id="lm-sku"></div>
+            </div>
+            <div class="lm-fold"></div>
+            <div class="lm-right">
+              <div class="lm-sku-r" id="lm-sku-r"></div>
+              <div class="lm-name" id="lm-name"></div>
+              <div class="lm-metal" id="lm-metal"></div>
+              <div class="lm-stone" id="lm-stone"></div>
+              <div class="lm-bottom-row">
+                <span class="lm-date" id="lm-date"></span>
+                <span class="lm-cat" id="lm-cat"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="print-zpl-section">
+          <div class="zpl-header">
+            <h3 class="section-label">ZPL Raw Code</h3>
+            <button class="btn btn-secondary btn-sm" id="copy-zpl-btn">Copy ZPL</button>
+          </div>
+          <textarea id="zpl-textarea" class="zpl-textarea" readonly spellcheck="false"></textarea>
+
+          <div class="print-instructions">
+            <h4>How to Print</h4>
+            <ol>
+              <li>Open <strong>Zebra Browser Print</strong> on your computer</li>
+              <li>Select printer: <code>GC420t</code></li>
+              <li>Paste the ZPL code and click Print</li>
+            </ol>
+            <p class="or-divider">— or via terminal —</p>
+            <code class="lpr-cmd" id="lpr-cmd">lpr -P ZebraGC420t -l &lt;label.zpl&gt;</code>
+            <button class="btn btn-secondary btn-sm" id="copy-lpr-btn">Copy Command</button>
+          </div>
+
+          <div class="print-modal-actions">
+            <button class="btn btn-primary" id="send-to-printer-btn">Send to Printer</button>
+            <button class="btn btn-secondary" id="print-cancel">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ INVOICE MODAL -->
+  <div class="modal-overlay" id="invoice-modal" hidden>
+    <div class="modal-card modal-card-invoice">
+      <div class="modal-header">
+        <h2>Generate Invoice — <span id="invoice-sku-title"></span></h2>
+        <button class="modal-close" id="invoice-close" aria-label="Close">✕</button>
+      </div>
+      <form id="invoice-form" novalidate>
+        <input type="hidden" id="inv-sku" name="sku" />
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="inv-customer">Customer Name <span class="req">*</span></label>
+            <input type="text" id="inv-customer" name="customer_name" placeholder="e.g. Rahul Sharma" required />
+          </div>
+          <div class="form-group">
+            <label for="inv-phone">Customer Phone</label>
+            <input type="tel" id="inv-phone" name="customer_phone" placeholder="e.g. 9876543210" />
+          </div>
+          <div class="form-group">
+            <label for="inv-rate">Today's Rate (₹/g) <span class="req">*</span></label>
+            <input type="number" id="inv-rate" name="per_gram_rate" placeholder="e.g. 6800" min="0" step="1" required />
+          </div>
+          <div class="form-group">
+            <label for="inv-weight">Final Weight (g) <span class="req">*</span></label>
+            <input type="number" id="inv-weight" name="weight_used" placeholder="e.g. 10.20" min="0" step="0.01" required />
+          </div>
+          <div class="form-group">
+            <label for="inv-wastage">Wastage (%)</label>
+            <input type="number" id="inv-wastage" name="wastage_pct" placeholder="e.g. 3.5" min="0" step="0.1" />
+          </div>
+          <div class="form-group">
+            <label for="inv-making">Making Charges (₹)</label>
+            <input type="number" id="inv-making" name="making_charges" placeholder="e.g. 2500" min="0" step="1" />
+          </div>
+          <div class="form-group">
+            <label for="inv-stone-price">Stone Price (₹)</label>
+            <input type="number" id="inv-stone-price" name="stone_price" placeholder="e.g. 5000" min="0" step="1" />
+          </div>
+          <div class="form-group">
+            <label for="inv-notes">Notes</label>
+            <input type="text" id="inv-notes" name="notes" placeholder="Optional remarks" />
+          </div>
+        </div>
+
+        <!-- Live price breakup -->
+        <div class="inv-calc" id="inv-calc">
+          <div class="inv-calc-title">Price Breakup</div>
+          <div class="inv-calc-row"><span>Gold Value</span><span id="calc-gold">—</span></div>
+          <div class="inv-calc-row"><span>Wastage</span><span id="calc-wastage">—</span></div>
+          <div class="inv-calc-row"><span>Making Charges</span><span id="calc-making">—</span></div>
+          <div class="inv-calc-row"><span>Stone Price</span><span id="calc-stone">—</span></div>
+          <div class="inv-calc-row inv-calc-total"><span>Total</span><span id="calc-total">—</span></div>
+        </div>
+
+        <div class="form-error" id="invoice-error"></div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Generate &amp; Print Invoice</button>
+          <button type="button" class="btn btn-secondary" id="invoice-cancel">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ TOAST -->
+  <div class="toast-container" id="toast-container"></div>
+  <!-- Shared datalist for stone types — populated from JS -->
+  <datalist id="dl-stone-types"></datalist>
+
+  <script src="app.js"></script>
+</body>
+</html>

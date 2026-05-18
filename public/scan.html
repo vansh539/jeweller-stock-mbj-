@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Scan — MBJ</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    :root {
+      --primary:      #1a5c38;
+      --primary-dark: #133f27;
+      --gold:         #c9a84c;
+      --bg:           #f9f6f0;
+      --border:       #e0d8c8;
+      --text:         #1a1a1a;
+      --text-muted:   #666;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #111;
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      background: var(--primary-dark);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+    .topbar-title { font-size: 1rem; font-weight: 700; }
+    .topbar-back {
+      background: none; border: none; color: #fff;
+      font-size: 0.9rem; cursor: pointer;
+      padding: 4px 8px; border-radius: 6px; opacity: 0.85;
+    }
+    .topbar-back:hover { opacity: 1; background: rgba(255,255,255,0.1); }
+
+    /* ── Camera area ── */
+    .camera-wrap {
+      position: relative;
+      flex: 1;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      min-height: 240px;
+      max-height: 340px;
+    }
+
+    /* html5-qrcode renders into this div */
+    #qr-region {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      inset: 0;
+    }
+
+    /* Override html5-qrcode default styles */
+    #qr-region video {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+    }
+    #qr-region img { display: none !important; }
+
+    /* Our custom overlay on top */
+    .scan-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .scan-frame {
+      width: 240px;
+      height: 80px;
+      border: 2px solid rgba(201,168,76,0.85);
+      border-radius: 8px;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.42);
+      position: relative;
+    }
+    .scan-frame::before, .scan-frame::after,
+    .corner-bl, .corner-br {
+      content: '';
+      position: absolute;
+      width: 18px; height: 18px;
+      border-color: var(--gold); border-style: solid;
+    }
+    .scan-frame::before { top:-2px; left:-2px;   border-width: 3px 0 0 3px; border-radius: 6px 0 0 0; }
+    .scan-frame::after  { top:-2px; right:-2px;  border-width: 3px 3px 0 0; border-radius: 0 6px 0 0; }
+    .corner-bl          { bottom:-2px; left:-2px;  border-width: 0 0 3px 3px; border-radius: 0 0 0 6px; }
+    .corner-br          { bottom:-2px; right:-2px; border-width: 0 3px 3px 0; border-radius: 0 0 6px 0; }
+    .scan-line {
+      position: absolute; left: 6px; right: 6px; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      animation: scanline 1.8s ease-in-out infinite; top: 10px;
+    }
+    @keyframes scanline {
+      0%   { top: 10px; opacity: 0.9; }
+      50%  { top: 62px; opacity: 1; }
+      100% { top: 10px; opacity: 0.9; }
+    }
+    .scan-hint {
+      margin-top: 12px; color: rgba(255,255,255,0.75);
+      font-size: 0.78rem; text-align: center;
+    }
+
+    /* ── Status bar (loading / error) ── */
+    .cam-status {
+      position: absolute; inset: 0; z-index: 6;
+      display: flex; align-items: center; justify-content: center;
+      background: #000; color: #fff;
+      font-size: 0.88rem; text-align: center; padding: 20px;
+      line-height: 1.6;
+    }
+    .cam-status.hidden { display: none; }
+
+    /* ── Bottom sheet ── */
+    .sheet {
+      background: var(--bg);
+      border-radius: 18px 18px 0 0;
+      flex-shrink: 0;
+      overflow-y: auto;
+      max-height: 68vh;
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.22);
+    }
+    .sheet-handle {
+      width: 40px; height: 4px;
+      background: var(--border); border-radius: 2px;
+      margin: 10px auto 0;
+    }
+
+    /* ── Idle ── */
+    .idle-state { text-align: center; padding: 22px 20px 26px; color: var(--text-muted); }
+    .idle-icon  { font-size: 2rem; margin-bottom: 8px; }
+    .idle-state h3 { font-size: 1rem; color: var(--text); margin-bottom: 5px; }
+    .idle-state p  { font-size: 0.82rem; line-height: 1.55; }
+
+    /* ── Item card ── */
+    .item-card { display: none; padding: 16px 18px 8px; }
+    .item-card.visible { display: block; }
+
+    .item-card-header {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; margin-bottom: 12px;
+    }
+    .item-card-name  { font-size: 1.05rem; font-weight: 700; }
+    .item-card-sku   { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+    .status-badge    { padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+    .badge-instock   { background: #d4edda; color: #155724; }
+    .badge-sold      { background: #e2e3e5; color: #383d41; }
+    .badge-reserved  { background: #fff3cd; color: #856404; }
+    .badge-repair    { background: #f8d7da; color: #721c24; }
+
+    .item-details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .detail-pill  { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+    .detail-pill-label { font-size: 0.67rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .detail-pill-value { font-size: 0.88rem; font-weight: 600; margin-top: 2px; }
+
+    .item-actions { display: flex; gap: 10px; margin-bottom: 16px; }
+
+    .btn {
+      padding: 11px 16px; border: none; border-radius: 9px;
+      font-size: 0.88rem; font-weight: 600; cursor: pointer;
+      transition: opacity 0.15s; flex: 1; text-align: center;
+    }
+    .btn:active { opacity: 0.8; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-gold    { background: var(--gold); color: var(--primary-dark); }
+    .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+    .btn-full    { flex: none; width: 100%; }
+
+    /* ── Invoice form ── */
+    .invoice-form { display: none; padding: 0 18px 28px; }
+    .invoice-form.visible { display: block; }
+    .form-divider { border: none; border-top: 1px solid var(--border); margin: 0 0 16px; }
+    .form-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 12px; }
+
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; }
+    .form-group input {
+      width: 100%; padding: 10px 12px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      font-size: 0.95rem; background: #fff; color: var(--text);
+      -webkit-appearance: none;
+    }
+    .form-group input:focus { outline: none; border-color: var(--primary); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    /* ── Live calc ── */
+    .live-calc { background: #fff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 14px; }
+    .calc-header { background: var(--primary); color: #fff; padding: 7px 12px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .calc-row { display: flex; justify-content: space-between; padding: 7px 12px; border-bottom: 1px solid var(--border); font-size: 0.85rem; color: #444; }
+    .calc-row:last-of-type { border-bottom: none; }
+    .calc-total { display: flex; justify-content: space-between; padding: 9px 12px; font-weight: 700; font-size: 0.95rem; color: var(--primary); background: #f0f8f4; }
+
+    .scan-again-wrap { padding: 0 18px 20px; display: none; }
+    .scan-again-wrap.visible { display: block; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #1a1a1a; color: #fff; padding: 10px 20px;
+      border-radius: 20px; font-size: 0.85rem; white-space: nowrap;
+      z-index: 999; opacity: 0; transition: opacity 0.2s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="topbar-back" onclick="location.href='/'">← Back</button>
+  <span class="topbar-title">♦ MBJ — Scan Item</span>
+  <span style="width:60px"></span>
+</div>
+
+<div class="camera-wrap">
+  <div id="qr-region"></div>
+
+  <div class="scan-overlay">
+    <div class="scan-frame">
+      <div class="corner-bl"></div>
+      <div class="corner-br"></div>
+      <div class="scan-line"></div>
+    </div>
+    <div class="scan-hint">Align barcode within the frame</div>
+  </div>
+
+  <div class="cam-status" id="cam-status">Starting camera…</div>
+</div>
+
+<div class="sheet">
+  <div class="sheet-handle"></div>
+
+  <div class="idle-state" id="idle-state">
+    <div class="idle-icon">📷</div>
+    <h3>Ready to Scan</h3>
+    <p>Point the camera at any item's barcode tag.<br>Item details will appear here.</p>
+  </div>
+
+  <div class="item-card" id="item-card">
+    <div class="item-card-header">
+      <div>
+        <div class="item-card-name" id="ic-name"></div>
+        <div class="item-card-sku" id="ic-sku"></div>
+      </div>
+      <span class="status-badge" id="ic-badge"></span>
+    </div>
+    <div class="item-details">
+      <div class="detail-pill">
+        <div class="detail-pill-label">Metal</div>
+        <div class="detail-pill-value" id="ic-metal"></div>
+      </div>
+      <div class="detail-pill">
+        <div class="detail-pill-label">Gross Weight</div>
+        <div class="detail-pill-value" id="ic-weight"></div>
+      </div>
+      <div class="detail-pill">
+        <div class="detail-pill-label">Category</div>
+        <div class="detail-pill-value" id="ic-category"></div>
+      </div>
+      <div class="detail-pill">
+        <div class="detail-pill-label">Stone</div>
+        <div class="detail-pill-value" id="ic-stone"></div>
+      </div>
+    </div>
+    <div class="item-actions">
+      <button class="btn btn-gold" id="btn-invoice">🧾 Create Invoice</button>
+      <button class="btn btn-outline" id="btn-scan-again">↩ Scan Again</button>
+    </div>
+  </div>
+
+  <div class="invoice-form" id="invoice-form">
+    <hr class="form-divider">
+    <div class="form-title">Invoice Details</div>
+    <div class="form-group">
+      <label>Customer Name *</label>
+      <input type="text" id="inv-customer" placeholder="Enter name" autocomplete="name">
+    </div>
+    <div class="form-group">
+      <label>Phone (optional)</label>
+      <input type="tel" id="inv-phone" placeholder="10-digit number">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Rate / gram (₹)</label>
+        <input type="number" id="inv-rate" placeholder="e.g. 7500" inputmode="decimal">
+      </div>
+      <div class="form-group">
+        <label>Weight used (g)</label>
+        <input type="number" id="inv-weight" placeholder="g" inputmode="decimal">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Wastage (%)</label>
+        <input type="number" id="inv-wastage" placeholder="%" inputmode="decimal">
+      </div>
+      <div class="form-group">
+        <label>Making (₹)</label>
+        <input type="number" id="inv-making" placeholder="₹" inputmode="decimal">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Stone Price (₹)</label>
+      <input type="number" id="inv-stone-price" placeholder="₹" inputmode="decimal">
+    </div>
+    <div class="live-calc">
+      <div class="calc-header">Price Breakdown</div>
+      <div class="calc-row"><span>Gold Value</span><span id="calc-gold">—</span></div>
+      <div class="calc-row"><span>Wastage</span><span id="calc-wastage">—</span></div>
+      <div class="calc-row"><span>Making</span><span id="calc-making">—</span></div>
+      <div class="calc-row"><span>Stone</span><span id="calc-stone">—</span></div>
+      <div class="calc-total"><span>Total</span><span id="calc-total">—</span></div>
+    </div>
+    <button class="btn btn-primary btn-full" id="btn-submit">Generate Invoice</button>
+  </div>
+
+  <div class="scan-again-wrap" id="scan-again-wrap">
+    <button class="btn btn-outline btn-full" id="btn-scan-another">↩ Scan Another Item</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let currentItem = null;
+  let scanner     = null;
+  let paused      = false;
+  let goldRates   = null;
+
+  function $(id) { return document.getElementById(id); }
+
+  function fmt(n) {
+    if (n == null || isNaN(n)) return '—';
+    return Number(n).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
+  function fmtRs(n) { return n ? 'Rs. ' + fmt(n) : '—'; }
+
+  function showToast(msg, ms = 2500) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), ms);
+  }
+
+  function statusClass(s) {
+    return { 'In Stock': 'badge-instock', 'Sold': 'badge-sold', 'Reserved': 'badge-reserved', 'On Repair': 'badge-repair' }[s] || '';
+  }
+
+  // ── Gold rates prefill ───────────────────────────────────────────────────
+  fetch('/api/gold-rates').then(r => r.ok ? r.json() : null).then(d => { goldRates = d; }).catch(() => {});
+
+  // ── Scanner ──────────────────────────────────────────────────────────────
+  async function startScanner() {
+    try {
+      const cameras = await Html5Qrcode.getCameras();
+      if (!cameras || cameras.length === 0) {
+        showCamError('No camera found on this device.');
+        return;
+      }
+
+      // Prefer back camera
+      const cam = cameras.find(c => /back|rear|environment/i.test(c.label))
+        || cameras[cameras.length - 1];
+
+      scanner = new Html5Qrcode('qr-region', { verbose: false });
+
+      await scanner.start(
+        cam.id,
+        {
+          fps: 15,
+          qrbox: { width: 240, height: 80 },
+          formatsToSupport: [ Html5QrcodeSupportedFormats.CODE_128 ],
+          aspectRatio: 1.7,
+        },
+        (text) => {
+          if (paused) return;
+          paused = true;
+          onScan(text.trim());
+        },
+        () => {} // frame errors are normal, ignore
+      );
+
+      $('cam-status').classList.add('hidden');
+
+    } catch (err) {
+      const msg = err.name === 'NotAllowedError'
+        ? 'Camera access denied.\nPlease allow camera in Safari Settings and reload.'
+        : 'Could not start camera: ' + err.message;
+      showCamError(msg);
+    }
+  }
+
+  function showCamError(msg) {
+    const el = $('cam-status');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+  }
+
+  async function stopScanner() {
+    if (scanner) {
+      try { await scanner.stop(); } catch (_) {}
+      scanner = null;
+    }
+  }
+
+  async function resumeScanner() {
+    paused = false;
+    if (!scanner) await startScanner();
+  }
+
+  // ── Scan handler ─────────────────────────────────────────────────────────
+  async function onScan(sku) {
+    showToast('Scanned: ' + sku);
+    try {
+      const res  = await fetch('/api/items/' + encodeURIComponent(sku));
+      if (!res.ok) { showToast('Item not found — try again'); paused = false; return; }
+      const data = await res.json();
+      showItem(data.item);
+    } catch (_) {
+      showToast('Network error — try again');
+      paused = false;
+    }
+  }
+
+  // ── Show item ────────────────────────────────────────────────────────────
+  function showItem(item) {
+    currentItem = item;
+
+    $('ic-name').textContent     = item.name || '—';
+    $('ic-sku').textContent      = item.sku  || '';
+    $('ic-metal').textContent    = [item.metal, item.purity].filter(Boolean).join(' / ') || '—';
+    $('ic-weight').textContent   = item.gross_weight != null ? Number(item.gross_weight).toFixed(2) + 'g' : '—';
+    $('ic-category').textContent = item.category || '—';
+    $('ic-stone').textContent    = (item.stone_type && item.stone_type !== 'None') ? item.stone_type : '—';
+
+    const badge = $('ic-badge');
+    badge.textContent = item.status || '';
+    badge.className   = 'status-badge ' + statusClass(item.status);
+
+    $('idle-state').style.display = 'none';
+    $('item-card').classList.add('visible');
+    $('invoice-form').classList.remove('visible');
+    $('scan-again-wrap').classList.remove('visible');
+
+    // Prefill invoice
+    $('inv-rate').value        = (item.metal === 'Gold' && goldRates) ? (item.purity === '22K' ? goldRates.g22k : item.purity === '24K' ? goldRates.g24k : item.purity === '18K' ? goldRates.g18k : '') : '';
+    $('inv-weight').value      = item.gross_weight   != null ? item.gross_weight   : '';
+    $('inv-wastage').value     = item.wastage_pct    != null ? item.wastage_pct    : '';
+    $('inv-making').value      = item.making_charges != null ? item.making_charges : '';
+    $('inv-stone-price').value = item.stone_price    != null ? item.stone_price    : '';
+    $('inv-customer').value    = '';
+    $('inv-phone').value       = '';
+    calcInvoice();
+  }
+
+  // ── Calc ─────────────────────────────────────────────────────────────────
+  function calcInvoice() {
+    const rate    = parseFloat($('inv-rate').value)        || 0;
+    const weight  = parseFloat($('inv-weight').value)      || 0;
+    const wastage = parseFloat($('inv-wastage').value)     || 0;
+    const making  = parseFloat($('inv-making').value)      || 0;
+    const stone   = parseFloat($('inv-stone-price').value) || 0;
+
+    const goldVal    = rate * weight;
+    const wastageAmt = (wastage / 100) * goldVal;
+    const total      = goldVal + wastageAmt + making + stone;
+
+    $('calc-gold').textContent    = goldVal  ? fmtRs(goldVal)    : '—';
+    $('calc-wastage').textContent = wastage  ? fmtRs(wastageAmt) : '—';
+    $('calc-making').textContent  = making   ? fmtRs(making)     : '—';
+    $('calc-stone').textContent   = stone    ? fmtRs(stone)      : '—';
+    $('calc-total').textContent   = total    ? fmtRs(total)      : '—';
+  }
+
+  // ── Submit invoice ────────────────────────────────────────────────────────
+  async function submitInvoice() {
+    const customer = $('inv-customer').value.trim();
+    if (!customer) { showToast('Enter customer name'); return; }
+    if (!currentItem) return;
+
+    const btn = $('btn-submit');
+    btn.textContent = 'Generating…';
+    btn.disabled    = true;
+
+    try {
+      const res  = await fetch('/api/invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sku:            currentItem.sku,
+          customer_name:  customer,
+          customer_phone: $('inv-phone').value.trim(),
+          per_gram_rate:  parseFloat($('inv-rate').value)        || 0,
+          weight_used:    parseFloat($('inv-weight').value)      || 0,
+          wastage_pct:    parseFloat($('inv-wastage').value)     || 0,
+          making_charges: parseFloat($('inv-making').value)      || 0,
+          stone_price:    parseFloat($('inv-stone-price').value) || 0,
+          notes: '',
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        showToast(data.error || 'Invoice failed');
+        btn.textContent = 'Generate Invoice';
+        btn.disabled    = false;
+        return;
+      }
+
+      window.open('/invoice-print.html?inv=' + encodeURIComponent(data.invoice.invoice_no), '_blank');
+      showToast('Invoice created!');
+
+      $('item-card').classList.remove('visible');
+      $('invoice-form').classList.remove('visible');
+      $('scan-again-wrap').classList.add('visible');
+    } catch (_) {
+      showToast('Network error');
+      btn.textContent = 'Generate Invoice';
+      btn.disabled    = false;
+    }
+  }
+
+  // ── Reset ────────────────────────────────────────────────────────────────
+  function resetToScan() {
+    currentItem = null;
+    $('idle-state').style.display = 'block';
+    $('item-card').classList.remove('visible');
+    $('invoice-form').classList.remove('visible');
+    $('scan-again-wrap').classList.remove('visible');
+    resumeScanner();
+  }
+
+  // ── Events ───────────────────────────────────────────────────────────────
+  $('btn-invoice').addEventListener('click', () => {
+    $('invoice-form').classList.add('visible');
+    setTimeout(() => $('invoice-form').scrollIntoView({ behavior: 'smooth' }), 50);
+  });
+  $('btn-scan-again').addEventListener('click', resetToScan);
+  $('btn-scan-another').addEventListener('click', resetToScan);
+  $('btn-submit').addEventListener('click', submitInvoice);
+  ['inv-rate','inv-weight','inv-wastage','inv-making','inv-stone-price'].forEach(id => {
+    $(id).addEventListener('input', calcInvoice);
+  });
+
+  // ── Start ────────────────────────────────────────────────────────────────
+  startScanner();
+</script>
+</body>
+</html>

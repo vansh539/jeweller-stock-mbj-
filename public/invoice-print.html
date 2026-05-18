@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12px;
+      background: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      color: #111;
+    }
+
+    /* Screen action buttons — hidden on print */
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .actions button {
+      padding: 9px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+    .btn-print { background: #1a5c38; color: white; }
+    .btn-close  { background: #ccc; color: #333; }
+
+    /* Receipt paper */
+    .receipt {
+      width: 302px; /* ~80mm at 96dpi */
+      background: white;
+      padding: 14px 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    }
+
+    .divider      { border: none; border-top: 1px dashed #999; margin: 8px 0; }
+    .divider-solid{ border: none; border-top: 1px solid #111;  margin: 8px 0; }
+
+    .center { text-align: center; }
+    .right  { text-align: right; }
+    .bold   { font-weight: bold; }
+    .large  { font-size: 14px; }
+    .small  { font-size: 10px; color: #555; }
+    .mt4    { margin-top: 4px; }
+    .mt8    { margin-top: 8px; }
+
+    /* Row: label left, value right */
+    .row {
+      display: flex;
+      justify-content: space-between;
+      line-height: 1.7;
+    }
+    .row .lbl { color: #555; }
+    .row .val { font-weight: 500; text-align: right; }
+
+    /* Total row */
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 15px;
+      font-weight: bold;
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 2px solid #111;
+    }
+
+    .words {
+      font-size: 10px;
+      color: #555;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    .footer-text {
+      font-size: 10px;
+      color: #666;
+      text-align: center;
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+
+    .loading { padding: 40px; color: #888; text-align: center; }
+    .error   { padding: 20px; color: red;  text-align: center; }
+
+    /* ── Print mode ── */
+    @media print {
+      @page { size: 80mm auto; margin: 4mm 2mm; }
+      body  { background: white; padding: 0; display: block; }
+      .actions { display: none; }
+      .receipt { box-shadow: none; width: 100%; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="actions" id="actions">
+    <button class="btn-print" onclick="window.print()">🖨 Print</button>
+    <button class="btn-close"  onclick="window.close()">✕ Close</button>
+  </div>
+
+  <div class="receipt" id="receipt">
+    <div class="loading">Loading…</div>
+  </div>
+
+  <script>
+    function fmt(v) {
+      if (v == null || v === 0) return null;
+      return '₹' + Number(v).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    }
+
+    function fmtOrDash(v) { return fmt(v) || '—'; }
+
+    function esc(s) {
+      if (s == null) return '';
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function amountInWords(n) {
+      n = Math.round(Number(n));
+      if (!n) return '';
+      const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine',
+                    'Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen',
+                    'Seventeen','Eighteen','Nineteen'];
+      const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+      function conv(x) {
+        if (x === 0)   return '';
+        if (x < 20)    return ones[x] + ' ';
+        if (x < 100)   return tens[Math.floor(x/10)] + (x%10 ? ' '+ones[x%10] : '') + ' ';
+        if (x < 1000)  return ones[Math.floor(x/100)] + ' Hundred ' + conv(x%100);
+        if (x < 1e5)   return conv(Math.floor(x/1000)) + 'Thousand ' + conv(x%1000);
+        if (x < 1e7)   return conv(Math.floor(x/1e5))  + 'Lakh '     + conv(x%1e5);
+        return conv(Math.floor(x/1e7)) + 'Crore ' + conv(x%1e7);
+      }
+      return conv(n).trim() + ' Rupees Only';
+    }
+
+    function row(label, value) {
+      if (!value && value !== 0) return '';
+      return `<div class="row"><span class="lbl">${esc(label)}</span><span class="val">${esc(value)}</span></div>`;
+    }
+
+    async function render() {
+      const receipt = document.getElementById('receipt');
+      const params  = new URLSearchParams(window.location.search);
+      const invNo   = params.get('inv');
+
+      if (!invNo) { receipt.innerHTML = '<div class="error">No invoice number in URL.</div>'; return; }
+
+      const stored = sessionStorage.getItem(`inv_${invNo}`);
+      if (!stored) { receipt.innerHTML = '<div class="error">Invoice data not found. Please regenerate the invoice.</div>'; return; }
+      const inv = JSON.parse(stored);
+      sessionStorage.removeItem(`inv_${invNo}`);
+
+      document.title = inv.invoice_no;
+
+      const stoneRow = (inv.stone_type && inv.stone_type !== 'None')
+        ? row('Stone', `${esc(inv.stone_type)}${inv.stone_weight ? ' / ' + Number(inv.stone_weight).toFixed(2) + 'ct' : ''}`)
+        : '';
+
+      const wastageRow = inv.wastage_pct
+        ? row(`Wastage (${Number(inv.wastage_pct).toFixed(1)}%)`, fmtOrDash(inv.wastage_amount))
+        : '';
+
+      const makingRow = inv.making_charges
+        ? row('Making Charges', fmtOrDash(inv.making_charges))
+        : '';
+
+      const stoneValRow = inv.stone_price
+        ? row('Stone Price', fmtOrDash(inv.stone_price))
+        : '';
+
+      receipt.innerHTML = `
+        <!-- Header -->
+        <div class="center bold large">ESTIMATION / QUOTATION</div>
+        <hr class="divider-solid" />
+
+        <!-- Invoice meta -->
+        ${row('Invoice No.', inv.invoice_no)}
+        ${row('Date', inv.date_created)}
+        <hr class="divider" />
+
+        <!-- Customer -->
+        <div class="bold mt4">Customer</div>
+        <div class="mt4">${esc(inv.customer_name)}</div>
+        ${inv.customer_phone ? `<div class="small">${esc(inv.customer_phone)}</div>` : ''}
+        <hr class="divider" />
+
+        <!-- Item -->
+        <div class="bold mt4">Item Details</div>
+        <div class="mt4 bold">${esc(inv.name || '—')}</div>
+        ${row('SKU', inv.sku)}
+        ${row('Category', inv.category)}
+        ${row('Metal', inv.metal && inv.purity ? inv.metal + ' / ' + inv.purity : null)}
+        ${row('Gross Wt.', inv.gross_weight != null ? Number(inv.gross_weight).toFixed(2) + ' g' : null)}
+        ${row('Net Wt.', inv.net_weight != null ? Number(inv.net_weight).toFixed(2) + ' g' : null)}
+        ${stoneRow}
+        <hr class="divider" />
+
+        <!-- Price breakup -->
+        <div class="bold mt4">Price Breakup</div>
+        <div class="mt4">
+          ${row('Rate', inv.per_gram_rate ? '₹' + Number(inv.per_gram_rate).toLocaleString('en-IN') + '/g' : null)}
+          ${row('Final Weight', inv.weight_used != null ? Number(inv.weight_used).toFixed(2) + ' g' : null)}
+          ${row('Gold Value', fmtOrDash(inv.gold_value))}
+          ${wastageRow}
+          ${makingRow}
+          ${stoneValRow}
+        </div>
+
+        <div class="total-row">
+          <span>TOTAL</span>
+          <span>${fmtOrDash(inv.amount_paid)}</span>
+        </div>
+        <div class="words">${amountInWords(inv.amount_paid)}</div>
+
+        <hr class="divider" />
+
+        <div class="footer-text">
+          Thank you for your purchase.<br>
+          Goods once sold are not returnable.<br><br>
+          <span style="font-weight:bold;color:#111;">⚠ This receipt is valid for 2 hours only.</span><br>
+          Price subject to change after 2 hours.
+        </div>
+      `;
+    }
+
+    render();
+  </script>
+</body>
+</html>

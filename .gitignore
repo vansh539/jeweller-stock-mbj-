@@ -1,0 +1,28 @@
+node_modules/
+
+# Database — stays local, never pushed
+jeweller-stock.db
+jeweller-stock.db-shm
+jeweller-stock.db-wal
+*.db-shm
+*.db-wal
+*.db
+
+# Client-specific files — set up manually on each machine
+license.key
+cert.pem
+key.pem
+
+# Backups — local only
+backups/
+
+# Dev tooling — not for client
+.claude/
+.claude-flow/
+.swarm/
+.mcp.json
+CLAUDE.md
+
+# OS
+.DS_Store
+Thumbs.db

@@ -14,12 +14,12 @@
 function generateZPL(item) {
   const PW   = 800;   // 100mm — must equal physical media width to avoid centering
   const LL   = 104;   // 13mm tall (1.3cm box height at 203dpi)
-  const NECK = 160;   // 20mm neck — box starts here
+  const NECK = 80;    // 10mm neck — box starts here (tune by ±8 dots per mm)
   const BOX  = 440;   // 55mm box (both faces)
   const FACE = 217;   // usable dots per half-face
-  const HALF = NECK + 220;       // = 380, fold at box midpoint
-  const L2   = HALF + 3;        // = 383, Face 2 start
-  const BOXR = NECK + BOX;      // = 600, box right edge (for right-alignment)
+  const HALF = NECK + 220;       // = 300, fold at box midpoint
+  const L2   = HALF + 3;        // = 303, Face 2 start
+  const BOXR = NECK + BOX;      // = 520, box right edge (for right-alignment)
 
   const lc  = (y, f, t) => `^FO${NECK},${y}${f}^FB${FACE},1,0,C,0^FD${t}^FS`;
   const rl  = (y, f, t) => `^FO${L2},${y}${f}^FD${t}^FS`;

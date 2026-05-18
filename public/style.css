@@ -806,9 +806,10 @@ a:hover { text-decoration: underline; }
 }
 
 /* Label mockup — pixel-accurate HTML simulation of the 1.5" × 1" Zebra tag */
+/* Landscape fold-over tag: 100mm × 15mm, neck on left, fold in middle */
 .label-mockup {
-  width: 380px;
-  height: 92px;
+  width: 390px;
+  height: 64px;
   background: #fff;
   border: 1.5px solid #bbb;
   border-radius: 3px;
@@ -819,8 +820,28 @@ a:hover { text-decoration: underline; }
   overflow: hidden;
 }
 
+/* Neck / loop area — ~20mm, no printing */
+.lm-neck {
+  width: 75px;
+  flex-shrink: 0;
+  background: #f0f0ee;
+  border-right: 1px dashed #bbb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lm-neck::after {
+  content: '';
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid #aaa;
+}
+
+/* Face 1 — front (barcode side) */
 .lm-left {
-  width: 190px;
+  width: 150px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -829,6 +850,7 @@ a:hover { text-decoration: underline; }
   overflow: hidden;
 }
 
+/* Vertical fold line */
 .lm-fold {
   width: 1px;
   background: #444;
@@ -836,6 +858,7 @@ a:hover { text-decoration: underline; }
   flex-shrink: 0;
 }
 
+/* Face 2 — back (details side) */
 .lm-right {
   flex: 1;
   display: flex;
@@ -866,7 +889,7 @@ a:hover { text-decoration: underline; }
 
 .lm-barcode svg {
   width: 100%;
-  height: 54px;
+  height: 38px;
   display: block;
 }
 
@@ -877,12 +900,17 @@ a:hover { text-decoration: underline; }
   color: #333;
   margin-top: 1px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lm-sku-r {
   font-size: 5.5px;
   color: #777;
   letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lm-name {
@@ -897,6 +925,9 @@ a:hover { text-decoration: underline; }
 .lm-metal {
   font-size: 6.5px;
   color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lm-stone {
@@ -904,6 +935,9 @@ a:hover { text-decoration: underline; }
   color: #555;
   font-style: italic;
   min-height: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lm-stone:empty { display: none; }

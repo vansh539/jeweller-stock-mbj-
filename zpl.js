@@ -1,125 +1,101 @@
 'use strict';
 
 /**
- * ZPL II label for Zebra GC420t — 6.2 cm × 1.5 cm tag at 203 dpi.
+ * ZPL II label for Zebra GC420t — 100mm × 15mm fold-over jewellery tag at 203 dpi.
  *
- * Pixel dimensions : 496 × 120 dots
- * Fold point       : x = 248 (tag folds in half and clips to product)
+ * Label loaded LANDSCAPE: 100mm across printhead (PW=800), 15mm in feed dir (LL=120).
  *
- * LEFT HALF  (front face) — shop name, barcode, GW
- * RIGHT HALF (back face)  — SKU, item name, metal/purity + NW, stone, date/category
+ * NECK      x=0–159    (~20mm) — blank, loop/hole area, no printing
+ * FACE 1    x=163–476  (~39mm) — front: shop name, barcode, GW
+ * FOLD LINE x=480               — vertical line
+ * FACE 2    x=484–797  (~39mm) — back: SKU, name, metal/purity, stone, date/category
  *
  * No MRP on tag.
  */
 function generateZPL(item) {
-  const LABEL_WIDTH  = 496;
-  const LABEL_HEIGHT = 120;
-  const HALF         = 248;
+  const PW   = 800;   // 100mm across printhead
+  const LL   = 120;   // 15mm feed direction
+  const NECK = 160;   // neck end — no printing left of this x
+  const L1   = NECK + 3;          // face 1 left edge (with small margin)
+  const HALF = 480;               // fold x position
+  const L2   = HALF + 4;          // face 2 left edge
+  const FACE = HALF - L1;         // face width in dots (~313)
 
-  function leftCentred(y, fontCmd, text) {
-    return `^FO0,${y}${fontCmd}^FB${HALF},1,0,C,0^FD${text}^FS`;
-  }
-  function rightLeft(y, fontCmd, text) {
-    return `^FO${HALF + 4},${y}${fontCmd}^FD${text}^FS`;
-  }
-  function rightRight(y, fontCmd, text) {
-    return `^FO${HALF},${y}${fontCmd}^FB${HALF - 4},1,0,R,0^FD${text}^FS`;
-  }
+  const lc  = (y, f, t) => `^FO${L1},${y}${f}^FB${FACE},1,0,C,0^FD${t}^FS`;  // face1 centred
+  const rl  = (y, f, t) => `^FO${L2},${y}${f}^FD${t}^FS`;                     // face2 left
+  const rr  = (y, f, t) => `^FO${L2},${y}${f}^FB${PW - L2 - 3},1,0,R,0^FD${t}^FS`; // face2 right
 
-  // At 203 dpi the GC420t renders a minimum of ~2 dots per module.
-  // Full 18-char SKU → ~466 dots wide — overflows the left half.
-  // Encode only the numeric YYYYMMDDXXXX part using Code 128C (digit pairs),
-  // which is ~101 modules × 2 dots = 202 dots + quiet zones ≈ 242 dots → fits.
   function barcodePayload(skuStr) {
     const m = skuStr.match(/JS-(\d{8})-(\d+)/);
-    if (m) return `${m[1]}${m[2].padStart(4, '0')}`;   // e.g. "202605160001"
+    if (m) return `${m[1]}${m[2].padStart(4, '0')}`;
     return skuStr.replace(/[^A-Z0-9]/g, '').slice(0, 12);
   }
-  function formatINR(value) {
-    if (value == null || isNaN(value)) return '—';
-    try {
-      return Number(value).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-    } catch (_) { return String(Number(value).toFixed(2)); }
+  function formatINR(v) {
+    if (v == null || isNaN(v)) return '—';
+    try { return Number(v).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+    catch (_) { return String(Number(v).toFixed(2)); }
   }
 
-  const sku         = (item.sku          || '').toString().trim();
-  const metal       = (item.metal        || '').toString().trim();
-  const purity      = (item.purity       || '').toString().trim();
-  const grossWeight = item.gross_weight  != null ? `${Number(item.gross_weight).toFixed(2)}g` : '—';
+  const sku         = (item.sku         || '').toString().trim();
+  const metal       = (item.metal       || '').toString().trim();
+  const purity      = (item.purity      || '').toString().trim();
+  const grossWeight = item.gross_weight != null ? `${Number(item.gross_weight).toFixed(2)}g` : '—';
   const netWeight   = `${Number(item.net_weight || 0).toFixed(2)}g`;
   const itemName    = (item.item_name || item.name || '').toString().trim().slice(0, 22);
+  const category    = (item.category   || '').toString().trim();
 
   const metalPurity = [metal, purity].filter(Boolean).join('/');
-  const metalLine   = metalPurity
-    ? `${metalPurity}  NW:${netWeight}`
-    : `NW:${netWeight}`;
-
-  const category = (item.category || '').toString().trim();
+  const metalLine   = metalPurity ? `${metalPurity}  NW:${netWeight}` : `NW:${netWeight}`;
 
   let dateDisplay = '';
   if (item.date_added) {
-    const parts = item.date_added.toString().split('-');
-    dateDisplay = parts.length === 3
-      ? `${parts[2]}/${parts[1]}/${parts[0]}`
-      : item.date_added.toString();
+    const p = item.date_added.toString().split('-');
+    dateDisplay = p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : item.date_added.toString();
   }
 
-  const hasStone = !!(item.stone_type && item.stone_type !== 'None' && item.stone_type !== null);
+  const hasStone = !!(item.stone_type && item.stone_type !== 'None');
   let stoneLine = '';
   if (hasStone) {
-    const stoneType   = item.stone_type.toString().trim();
-    const stoneWeight = item.stone_weight != null ? `${Number(item.stone_weight).toFixed(2)}ct` : null;
-    const stonePrice  = item.stone_price  != null ? `Rs.${formatINR(item.stone_price)}` : null;
-    const parts = [stoneType];
-    if (stoneWeight) parts.push(stoneWeight);
-    if (stonePrice)  parts.push(stonePrice);
+    const parts = [item.stone_type.toString().trim()];
+    if (item.stone_weight != null) parts.push(`${Number(item.stone_weight).toFixed(2)}ct`);
+    if (item.stone_price  != null) parts.push(`Rs.${formatINR(item.stone_price)}`);
     stoneLine = parts.join(' ');
   }
 
-  const stoneOffset = hasStone ? 13 : 0;
-  const barcodeData = barcodePayload(sku);
-
+  const bc = barcodePayload(sku);
   const lines = [];
 
   lines.push('^XA');
-  lines.push(`^PW${LABEL_WIDTH}`);
-  lines.push(`^LL${LABEL_HEIGHT}`);
+  lines.push(`^PW${PW}`);
+  lines.push(`^LL${LL}`);
   lines.push('^LH0,0');
 
-  // ── LEFT HALF ─────────────────────────────────────────────────────────────
-  lines.push(leftCentred(3, '^A0N,12,9', 'M.BAJRANGLAL SONS'));
+  // ── FACE 1 (front) — barcode side ─────────────────────────────────────────
+  lines.push(lc(3,  '^A0N,11,8', 'M.BAJRANGLAL SONS'));
 
-  // Compact 12-digit numeric barcode — fits the 248-dot left half at 2 dots/module
-  lines.push('^FO4,17');
-  lines.push('^BY1,3,55');
-  lines.push('^BCN,55,N,N,N');
-  lines.push(`^FD${barcodeData}^FS`);
+  // Code 128C, 12-digit numeric — ~242 dots wide, fits within 313-dot face
+  lines.push(`^FO${L1 + 5},16^BY1,3,72^BCN,72,N,N,N^FD${bc}^FS`);
 
-  // GW bold — double-print at x=0 and x=1
-  lines.push(leftCentred(78, '^A0N,12,9', `GW:${grossWeight}`));
-  lines.push(`^FO1,78^A0N,12,9^FB${HALF},1,0,C,0^FDGW:${grossWeight}^FS`);
+  // GW bold (double-print)
+  lines.push(lc(94, '^A0N,11,8', `GW:${grossWeight}`));
+  lines.push(`^FO${L1 + 1},94^A0N,11,8^FB${FACE},1,0,C,0^FDGW:${grossWeight}^FS`);
 
-  // SKU in small text below GW (human-readable reference on front face)
-  lines.push(leftCentred(94, '^A0N,10,7', sku));
+  lines.push(lc(107, '^A0N,9,7', sku));
 
   // ── FOLD LINE ──────────────────────────────────────────────────────────────
-  lines.push(`^FO${HALF},0^GB1,${LABEL_HEIGHT},1^FS`);
+  lines.push(`^FO${HALF},0^GB1,${LL},1^FS`);
 
-  // ── RIGHT HALF ────────────────────────────────────────────────────────────
-  lines.push(rightLeft(3,  '^A0N,10,8', sku));
-  lines.push(rightLeft(15, '^A0N,13,10', itemName));
-  lines.push(rightLeft(30, '^A0N,11,8',  metalLine));
+  // ── FACE 2 (back) — details side ──────────────────────────────────────────
+  lines.push(rl(3,  '^A0N,9,7',  sku));
+  lines.push(rl(14, '^A0N,13,10', itemName));
+  lines.push(rl(30, '^A0N,10,8', metalLine));
 
-  if (hasStone) {
-    lines.push(rightLeft(43, '^A0N,11,8', stoneLine));
-  }
-
-  const dateY = 43 + stoneOffset;
-  if (dateDisplay) lines.push(rightLeft(dateY,  '^A0N,10,8', dateDisplay));
-  if (category)    lines.push(rightRight(dateY, '^A0N,10,8', category));
+  let ny = 44;
+  if (hasStone) { lines.push(rl(ny, '^A0N,10,8', stoneLine)); ny += 13; }
+  if (dateDisplay) lines.push(rl(ny,  '^A0N,9,7', dateDisplay));
+  if (category)    lines.push(rr(ny,  '^A0N,9,7', category));
 
   lines.push('^XZ');
-
   return lines.join('\n');
 }
 

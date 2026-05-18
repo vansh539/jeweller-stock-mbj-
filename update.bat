@@ -22,10 +22,10 @@ copy /Y "jeweller-stock.db" "%BACKUP_NAME%" >nul
 echo      Backed up to: %BACKUP_NAME%
 
 echo  [3/4] Downloading latest files...
-powershell -Command "& {
+echo      Folder: %~dp0
+powershell -ExecutionPolicy Bypass -Command "& {
     $base = 'https://raw.githubusercontent.com/vansh539/jeweller-stock-mbj-/main'
-    $dest = Split-Path -Parent $MyInvocation.ScriptName
-    if (-not $dest) { $dest = Get-Location }
+    $dest = '%~dp0'.TrimEnd('\')
 
     $files = @(
         'server.js',

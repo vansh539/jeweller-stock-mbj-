@@ -18,7 +18,7 @@ function generateZPL(item) {
   const L2   = HALF + 3;   // = 223, Face 2 start
   const FACE = HALF - 3;   // = 217, usable dots per half-face
 
-  const lc  = (y, f, t) => `^FO2,${y}${f}^FB${FACE},1,0,C,0^FD${t}^FS`;
+  const lc  = (y, f, t) => `^FO2,${y}${f}^FB${FACE},1,0,L,0^FD${t}^FS`;
   const rl  = (y, f, t) => `^FO${L2},${y}${f}^FD${t}^FS`;
   const rr  = (y, f, t) => `^FO${L2},${y}${f}^FB${440 - L2 - 2},1,0,R,0^FD${t}^FS`;
 
@@ -75,7 +75,7 @@ function generateZPL(item) {
 
   // GW bold (double-print for weight)
   lines.push(lc(89, '^A0N,10,8', `GW:${grossWeight}`));
-  lines.push(`^FO3,89^A0N,10,8^FB${FACE},1,0,C,0^FDGW:${grossWeight}^FS`);
+  lines.push(`^FO3,89^A0N,10,8^FB${FACE},1,0,L,0^FDGW:${grossWeight}^FS`);
 
   lines.push(lc(102, '^A0N,8,7', sku));
 

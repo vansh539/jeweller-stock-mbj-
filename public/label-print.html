@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Label Print</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #ddd;
+      font-family: monospace;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    /* ── Screen controls ── */
+    .controls {
+      background: white;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.12);
+      max-width: 780px;
+    }
+    .controls label { font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+    .controls input[type=number] { width: 58px; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; }
+    .ctrl-btn { padding: 6px 13px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 700; }
+    .ctrl-save  { background: #555;    color: white; }
+    .ctrl-cfg   { background: #2563eb; color: white; }
+    .ctrl-print { background: #1a5c38; color: white; font-size: 13px; padding: 8px 20px; }
+    .ctrl-close { background: #ccc;    color: #333; }
+    .controls .sep { color: #bbb; }
+
+    /* ── Label wrapper (offset applied here) ── */
+    .label-wrapper {
+      display: inline-block;
+    }
+
+    /* ── The physical label at real mm dimensions ── */
+    .label {
+      width: 54mm;
+      background: white;
+      box-shadow: 0 3px 14px rgba(0,0,0,.25);
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+    }
+
+    .label-body {
+      display: flex;
+      height: 22mm;
+    }
+
+    /* Back panel (barcode side) */
+    .label-left {
+      width: 27mm;
+      flex-shrink: 0;
+      height: 22mm;
+      border-right: 1px dashed #bbb;
+      padding: 1mm 1mm 1mm 1.5mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    .label-left svg { width: 24mm; height: auto; display: block; }
+
+    /* Front panel (info side) */
+    .label-right {
+      width: 27mm;
+      flex-shrink: 0;
+      height: 22mm;
+      padding: 1mm 1.5mm 0.5mm 1.5mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 0;
+      overflow: hidden;
+    }
+
+    .lbl-row {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.25;
+    }
+
+    /* Neck */
+    .label-neck {
+      height: 4mm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-top: 1px dashed #bbb;
+      overflow: hidden;
+      gap: 2mm;
+    }
+    .label-neck .neck-txt {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 36mm;
+    }
+    .label-hole {
+      width: 2.5mm;
+      height: 2.5mm;
+      border-radius: 50%;
+      border: 0.5px solid #888;
+      flex-shrink: 0;
+    }
+
+    /* ── Config panel ── */
+    .config-panel {
+      background: white;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-top: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.12);
+      max-width: 780px;
+    }
+    .config-panel h3 { font-size: 14px; margin-bottom: 4px; }
+    .config-hint { font-size: 11px; color: #888; margin-bottom: 14px; }
+    .cfg-section-head { font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase;
+                        letter-spacing: .5px; padding: 10px 0 4px; border-top: 1px solid #eee; margin-top: 6px; }
+    .cfg-section-head:first-child { border-top: none; margin-top: 0; }
+
+    .cfg-row {
+      display: grid;
+      grid-template-columns: 26px 110px 1fr 44px 44px;
+      gap: 6px;
+      align-items: center;
+      padding: 4px 0;
+      border-bottom: 1px solid #f5f5f5;
+      font-size: 12px;
+    }
+    .cfg-row .cfg-label { color: #444; }
+    .cfg-row input[type=text]   { padding: 3px 6px; border: 1px solid #ddd; border-radius: 3px;
+                                   font-family: monospace; font-size: 11px; }
+    .cfg-row input[type=number] { width: 40px; padding: 3px 5px; border: 1px solid #ddd;
+                                   border-radius: 3px; font-size: 11px; }
+    .cfg-row-neck {
+      display: grid;
+      grid-template-columns: 26px 110px 1fr 44px;
+      gap: 6px;
+      align-items: center;
+      padding: 4px 0;
+      font-size: 12px;
+    }
+
+    .token-hint { font-size: 10px; color: #999; margin-top: 10px; line-height: 1.6; }
+    .token-hint code { background: #f5f5f5; padding: 1px 4px; border-radius: 3px; font-size: 10px; }
+
+    .btn-save-tpl {
+      margin-top: 14px;
+      background: #1a5c38; color: white;
+      border: none; border-radius: 5px;
+      padding: 8px 18px; font-weight: 700; font-size: 13px;
+      cursor: pointer;
+    }
+    .btn-reset-tpl {
+      margin-top: 14px; margin-left: 8px;
+      background: #eee; color: #555;
+      border: none; border-radius: 5px;
+      padding: 8px 14px; font-size: 12px; cursor: pointer;
+    }
+
+    .print-note {
+      max-width: 780px;
+      margin-top: 16px;
+      background: #fffbea;
+      border: 1px solid #f0d060;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 11px;
+      line-height: 1.7;
+      color: #555;
+    }
+    .print-note strong { color: #333; }
+
+    /* ── Print media ── */
+    @media print {
+      @page { size: 54mm 26mm; margin: 0; }
+      body  { background: white; padding: 0; }
+      .controls, .config-panel, .print-note { display: none; }
+      .label { box-shadow: none; }
+      .label-left { border-right: 1px dashed #bbb; }
+      .label-neck  { border-top: 1px dashed #bbb; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Controls (hidden on print) -->
+  <div class="controls" id="controls">
+    <label>X Offset: <input type="number" id="off-x" step="0.1" value="0"> mm</label>
+    <label>Y Offset: <input type="number" id="off-y" step="0.1" value="0"> mm</label>
+    <button class="ctrl-btn ctrl-save"  onclick="saveOffset()">Save</button>
+    <span class="sep">|</span>
+    <button class="ctrl-btn ctrl-cfg"   onclick="toggleConfig()">⚙ Configure Rows</button>
+    <button class="ctrl-btn ctrl-print" onclick="window.print()">🖨 Print Label</button>
+    <button class="ctrl-btn ctrl-close" onclick="window.close()">✕ Close</button>
+  </div>
+
+  <!-- Label rendered at real mm size -->
+  <div class="label-wrapper" id="label-wrapper">
+    <div class="label" id="label">
+      <div style="padding:14px;color:#888;font-size:12px">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Print tip -->
+  <div class="print-note" id="print-note" hidden>
+    <strong>First-time setup:</strong> In Windows, open <em>Devices and Printers</em> → right-click the Zebra GC420t
+    → <em>Printing Preferences</em> → set paper size to <strong>54 × 26 mm</strong>.<br>
+    Then click <em>Print Label</em>, select the Zebra printer, and click Print.<br>
+    Use <strong>X/Y Offset</strong> above to nudge position if needed — it saves automatically.
+  </div>
+
+  <!-- Row config panel -->
+  <div class="config-panel" id="config-panel" hidden>
+    <h3>⚙ Configure Label Rows</h3>
+    <p class="config-hint">Toggle rows on/off, edit what each row shows, and set font size (pt).</p>
+    <div id="cfg-rows-container"></div>
+    <p class="token-hint">
+      Available tokens:
+      <code>{sku}</code> <code>{name}</code> <code>{category}</code>
+      <code>{metal}</code> <code>{purity}</code>
+      <code>{gw}</code> <code>{nw}</code>
+      <code>{stone_type}</code> <code>{stone_weight}</code>
+      <code>{date}</code>
+    </p>
+    <button class="btn-save-tpl"  onclick="saveTemplate()">Save Template</button>
+    <button class="btn-reset-tpl" onclick="resetTemplate()">Reset to Default</button>
+  </div>
+
+  <script>
+  // ── Default template ────────────────────────────────────────────────────────
+  const DEFAULT_TEMPLATE = {
+    version: 2,
+    leftRows: [
+      { id: 'weights', label: 'GW / NW',   enabled: true,  tpl: 'GW:{gw}g  NW:{nw}g', size: 6 }
+    ],
+    rightRows: [
+      { id: 'sku_hdr',  label: 'SKU Header',   enabled: true,  tpl: 'MBJ {sku}',               size: 6,  bold: false },
+      { id: 'name',     label: 'Item Name',     enabled: true,  tpl: '{name}',                  size: 8,  bold: true  },
+      { id: 'metal',    label: 'Metal / Purity',enabled: false, tpl: '{metal} {purity}',         size: 6,  bold: false },
+      { id: 'stone',    label: 'Stone Info',    enabled: true,  tpl: '{stone_type} {stone_weight}ct', size: 6, bold: false, ifField: 'stone_type' },
+      { id: 'date',     label: 'Date',          enabled: true,  tpl: '{date}',                  size: 6,  bold: false },
+    ],
+    neckRow: { enabled: true, tpl: '{category}', size: 6 }
+  };
+
+  // ── State ───────────────────────────────────────────────────────────────────
+  let itemData    = null;
+  let template    = loadTemplate();
+  let offsetX     = parseFloat(localStorage.getItem('mbj_label_off_x') || '0');
+  let offsetY     = parseFloat(localStorage.getItem('mbj_label_off_y') || '0');
+
+  function loadTemplate() {
+    try {
+      const raw = localStorage.getItem('mbj_label_template');
+      if (!raw) return JSON.parse(JSON.stringify(DEFAULT_TEMPLATE));
+      const t = JSON.parse(raw);
+      if (t.version !== DEFAULT_TEMPLATE.version) return JSON.parse(JSON.stringify(DEFAULT_TEMPLATE));
+      return t;
+    } catch { return JSON.parse(JSON.stringify(DEFAULT_TEMPLATE)); }
+  }
+
+  // ── Token substitution ──────────────────────────────────────────────────────
+  function tokens(item) {
+    const gw = item.gross_weight != null ? Number(item.gross_weight).toFixed(2) : '—';
+    const nw = item.net_weight   != null ? Number(item.net_weight).toFixed(2)   : '—';
+    const sw = item.stone_weight != null ? Number(item.stone_weight).toFixed(2) : '';
+    const parts = (item.date_added || '').split('-');
+    const date = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : (item.date_added || '');
+    return {
+      sku:          item.sku          || '',
+      name:         item.name         || '',
+      category:     item.category     || '',
+      metal:        item.metal        || '',
+      purity:       item.purity       || '',
+      gw, nw,
+      stone_type:   item.stone_type && item.stone_type !== 'None' ? (item.stone_type || '') : '',
+      stone_weight: sw,
+      date,
+    };
+  }
+
+  function applyTokens(tpl, tok) {
+    return tpl.replace(/\{(\w+)\}/g, (_, k) => tok[k] != null ? tok[k] : '');
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Barcode payload (matches ZPL logic) ────────────────────────────────────
+  function barcodePayload(skuStr) {
+    const m = skuStr.match(/JS-(\d{8})-(\d+)/);
+    if (m) return `${m[1]}${m[2].padStart(4, '0')}`;
+    return skuStr.replace(/[^A-Z0-9]/g, '').slice(0, 12);
+  }
+
+  // ── Render label ────────────────────────────────────────────────────────────
+  function renderLabel(item) {
+    const tok = tokens(item);
+    const t   = template;
+
+    // Left panel rows
+    let leftRowsHtml = '';
+    t.leftRows.forEach(row => {
+      if (!row.enabled) return;
+      const txt = applyTokens(row.tpl, tok).trim();
+      if (!txt) return;
+      leftRowsHtml += `<div class="lbl-row" style="font-size:${row.size}pt">${esc(txt)}</div>`;
+    });
+
+    // Right panel rows
+    let rightRowsHtml = '';
+    t.rightRows.forEach(row => {
+      if (!row.enabled) return;
+      if (row.ifField && !tok[row.ifField]) return;
+      const txt = applyTokens(row.tpl, tok).trim();
+      if (!txt) return;
+      const bold = row.bold ? 'font-weight:bold;' : '';
+      rightRowsHtml += `<div class="lbl-row" style="font-size:${row.size}pt;${bold}">${esc(txt)}</div>`;
+    });
+
+    // Neck
+    let neckHtml = '';
+    if (t.neckRow && t.neckRow.enabled) {
+      const txt = applyTokens(t.neckRow.tpl, tok).trim();
+      neckHtml = txt
+        ? `<span class="neck-txt" style="font-size:${t.neckRow.size}pt">${esc(txt)}</span>`
+        : '';
+    }
+
+    document.getElementById('label').innerHTML = `
+      <div class="label-body">
+        <div class="label-left">
+          <svg id="barcode-svg"></svg>
+          ${leftRowsHtml}
+        </div>
+        <div class="label-right">
+          ${rightRowsHtml}
+        </div>
+      </div>
+      <div class="label-neck">
+        ${neckHtml}
+        <div class="label-hole"></div>
+      </div>
+    `;
+
+    // Render barcode
+    try {
+      JsBarcode('#barcode-svg', barcodePayload(item.sku), {
+        format: 'CODE128', width: 0.95, height: 42,
+        displayValue: false, margin: 0,
+        background: '#fff', lineColor: '#000',
+      });
+    } catch {}
+  }
+
+  // ── Offset ──────────────────────────────────────────────────────────────────
+  function applyOffset(x, y) {
+    const w = document.getElementById('label-wrapper');
+    w.style.marginLeft = `${x}mm`;
+    w.style.marginTop  = `${y}mm`;
+  }
+
+  function saveOffset() {
+    offsetX = parseFloat(document.getElementById('off-x').value) || 0;
+    offsetY = parseFloat(document.getElementById('off-y').value) || 0;
+    localStorage.setItem('mbj_label_off_x', offsetX);
+    localStorage.setItem('mbj_label_off_y', offsetY);
+    applyOffset(offsetX, offsetY);
+  }
+
+  // ── Config panel ────────────────────────────────────────────────────────────
+  function toggleConfig() {
+    const panel = document.getElementById('config-panel');
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden) renderConfig();
+  }
+
+  function renderConfig() {
+    const t   = template;
+    let html  = '';
+
+    html += `<div class="cfg-section-head">Back Panel (Barcode Side)</div>`;
+    html += `<div class="cfg-row"><span></span><span style="font-weight:600;font-size:11px">Barcode</span><span style="font-size:11px;color:#888">Always shown (fixed)</span><span></span><span></span></div>`;
+    t.leftRows.forEach((row, i) => {
+      html += cfgRowHtml('left', i, row);
+    });
+
+    html += `<div class="cfg-section-head">Front Panel (Info Side)</div>`;
+    t.rightRows.forEach((row, i) => {
+      html += cfgRowHtml('right', i, row);
+    });
+
+    html += `<div class="cfg-section-head">Neck / String Area</div>`;
+    const nr = t.neckRow;
+    html += `
+      <div class="cfg-row-neck">
+        <input type="checkbox" ${nr.enabled ? 'checked' : ''} onchange="tplSet('neck','enabled',this.checked)">
+        <span class="cfg-label">Category</span>
+        <input type="text" value="${esc(nr.tpl)}" oninput="tplSet('neck','tpl',this.value)" placeholder="template">
+        <input type="number" value="${nr.size}" min="4" max="12" oninput="tplSet('neck','size',Number(this.value))" title="font size pt">
+      </div>`;
+
+    document.getElementById('cfg-rows-container').innerHTML = html;
+  }
+
+  function cfgRowHtml(side, i, row) {
+    return `
+      <div class="cfg-row">
+        <input type="checkbox" ${row.enabled ? 'checked' : ''} onchange="tplSetRow('${side}',${i},'enabled',this.checked)">
+        <span class="cfg-label">${esc(row.label)}</span>
+        <input type="text" value="${esc(row.tpl || '')}" oninput="tplSetRow('${side}',${i},'tpl',this.value)" placeholder="template">
+        <input type="number" value="${row.size||7}" min="4" max="14" oninput="tplSetRow('${side}',${i},'size',Number(this.value))" title="font size pt">
+        <span style="font-size:10px;color:#bbb">${row.ifField ? '?'+row.ifField : ''}</span>
+      </div>`;
+  }
+
+  function tplSetRow(side, i, key, val) {
+    if (side === 'left')  template.leftRows[i][key]  = val;
+    if (side === 'right') template.rightRows[i][key] = val;
+    if (itemData) renderLabel(itemData);
+  }
+
+  function tplSet(section, key, val) {
+    if (section === 'neck') template.neckRow[key] = val;
+    if (itemData) renderLabel(itemData);
+  }
+
+  function saveTemplate() {
+    localStorage.setItem('mbj_label_template', JSON.stringify(template));
+    alert('Template saved!');
+    if (itemData) renderLabel(itemData);
+  }
+
+  function resetTemplate() {
+    if (!confirm('Reset to default layout?')) return;
+    template = JSON.parse(JSON.stringify(DEFAULT_TEMPLATE));
+    localStorage.removeItem('mbj_label_template');
+    renderConfig();
+    if (itemData) renderLabel(itemData);
+  }
+
+  // ── Init ────────────────────────────────────────────────────────────────────
+  async function init() {
+    // Restore offset
+    document.getElementById('off-x').value = offsetX;
+    document.getElementById('off-y').value = offsetY;
+    applyOffset(offsetX, offsetY);
+
+    document.getElementById('print-note').hidden = false;
+
+    const params = new URLSearchParams(window.location.search);
+    const sku    = params.get('sku');
+    if (!sku) {
+      document.getElementById('label').innerHTML = '<div style="padding:14px;color:red;font-size:12px">No SKU provided.</div>';
+      return;
+    }
+
+    try {
+      const res  = await fetch(`/api/items/${encodeURIComponent(sku)}`);
+      const body = await res.json();
+      if (!res.ok || !body.item) throw new Error(body.error || 'Item not found');
+      itemData = body.item;
+      document.title = `Label — ${sku}`;
+      renderLabel(itemData);
+    } catch (err) {
+      document.getElementById('label').innerHTML = `<div style="padding:14px;color:red;font-size:12px">Error: ${err.message}</div>`;
+    }
+  }
+
+  init();
+  </script>
+</body>
+</html>

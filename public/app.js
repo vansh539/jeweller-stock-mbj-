@@ -793,6 +793,11 @@ if (applyOffsetBtn) {
 $('print-close').addEventListener('click',  closePrintModal);
 $('print-cancel').addEventListener('click', closePrintModal);
 
+$('html-print-btn').addEventListener('click', () => {
+  if (!currentSku) return;
+  window.open(`/label-print.html?sku=${encodeURIComponent(currentSku)}`, '_blank', 'width=760,height=680');
+});
+
 printModal.addEventListener('click', e => {
   if (e.target === printModal) closePrintModal();
 });

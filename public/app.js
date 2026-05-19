@@ -687,8 +687,9 @@ async function openPrintModal(sku) {
     const gw = it.gross_weight != null ? `${Number(it.gross_weight).toFixed(2)}g` : '—';
     const nw = `${Number(it.net_weight || 0).toFixed(2)}g`;
 
-    $('lm-sku').textContent   = `GW: ${gw}`;
-    $('lm-sku-r').textContent = sku;
+    $('lm-sku').textContent    = `GW: ${gw}`;
+    $('lm-sku-f1').textContent = sku;
+    $('lm-sku-r').textContent  = sku;
     $('lm-name').textContent  = (it.name || '').slice(0, 22);
 
     const metalPurity = [it.metal, it.purity].filter(Boolean).join(' / ');
@@ -723,11 +724,11 @@ async function openPrintModal(sku) {
   try {
     JsBarcode('#barcode-svg', barcodePayload(sku), {
       format: 'CODE128',
-      width: 1.1,
-      height: 45,
+      width: 1,
+      height: 30,
       displayValue: false,
-      margin: 2,
-      background: '#fff',
+      margin: 1,
+      background: '#fffef8',
       lineColor: '#000',
     });
   } catch (err) {

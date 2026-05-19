@@ -782,18 +782,19 @@ a:hover { text-decoration: underline; }
 
 .print-body {
   display: grid;
-  grid-template-columns: 440px 1fr;
+  grid-template-columns: 560px 1fr;
   gap: 0;
 }
 
 .print-preview-section {
   background: var(--bg-stripe);
-  padding: 20px;
+  padding: 20px 16px;
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
+  overflow: visible;
 }
 
 .section-label {
@@ -810,159 +811,128 @@ a:hover { text-decoration: underline; }
  * Box is full height; neck is ~25% of box height, centered on right edge.
  * Absolute positioning lets box border show above/below neck junction.
  */
+/* ─── Label preview ─────────────────────────────────────────────────────────
+   Physical tag: 8cm × 1.2cm box, 2.6cm neck, 0.2cm neck height, fold at 2.7cm
+   Scale: 1cm = 64px  →  1 ZPL dot (203dpi = 0.1252mm) = 0.801px
+   ───────────────────────────────────────────────────────────────────────── */
 .label-mockup {
   position: relative;
-  width: 385px;
-  height: 75px;
+  width: 512px;   /* 8cm × 64 */
+  height: 77px;   /* 1.2cm × 64 */
   font-family: 'Courier New', Courier, monospace;
 }
 
-/* Printable box: Face 1 + fold line + Face 2 */
+/* Printable box: 5.4cm × 1.2cm = 346px × 77px */
 .lm-box {
   position: absolute;
-  left: 0;
-  top: 0;
-  width: 215px;
-  height: 75px;
-  background: #fff;
-  border: 1.5px solid #aaa;
-  border-radius: 4px;
-  display: flex;
-  flex-direction: row;
+  left: 0; top: 0;
+  width: 346px; height: 77px;
+  background: #fdfaf3;
+  border: 1.5px solid #bbb;
+  border-radius: 3px;
   overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.22);
   z-index: 2;
 }
 
-/* Neck tab — very narrow, long, rounded right end; sits behind box */
+/* Neck: 2.6cm × 0.2cm = 166px × 13px, centred vertically on box */
 .lm-neck {
   position: absolute;
-  left: 214px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 170px;
-  height: 19px;
-  background: #fff;
-  border: 1.5px solid #aaa;
+  left: 344px;
+  top: 32px;
+  width: 166px;
+  height: 13px;
+  background: #fdfaf3;
+  border: 1.5px solid #bbb;
+  border-left: none;
   border-radius: 0 20px 20px 0;
-  box-shadow: 1px 1px 6px rgba(0,0,0,0.10);
+  box-shadow: 1px 1px 6px rgba(0,0,0,0.12);
   z-index: 1;
-}
-
-.lm-neck-hole { display: none; }
-
-/* Face 1 — front (barcode side) */
-.lm-left {
-  width: 105px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 4px 4px 3px;
-  overflow: hidden;
-}
-
-/* Dotted fold line */
-.lm-fold {
-  width: 1px;
-  background: repeating-linear-gradient(to bottom, #555 0px, #555 4px, transparent 4px, transparent 8px);
-  align-self: stretch;
-  flex-shrink: 0;
-}
-
-/* Face 2 — back (details side) */
-.lm-right {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 4px 6px;
-  overflow: hidden;
-  gap: 1.5px;
-}
-
-.lm-shop {
-  font-size: 6px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: #111;
-  margin-bottom: 2px;
-  white-space: nowrap;
-}
-
-.lm-barcode {
-  flex: 1;
   display: flex;
   align-items: center;
-  width: 100%;
-  overflow: hidden;
+  padding-left: 6px;
+  overflow: visible;
 }
 
-.lm-barcode svg {
-  width: 100%;
-  height: 30px;
-  display: block;
+/* Punch hole at the tip of the neck */
+.lm-neck-hole {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid #bbb;
+  background: var(--bg-stripe, #f0ede6);
 }
 
+/* Fold score line: dotted to look like a physical crease */
+.lm-fold {
+  position: absolute;
+  left: 173px; top: 0;
+  width: 1px; height: 77px;
+  background: repeating-linear-gradient(to bottom, #777 0px, #777 3px, transparent 3px, transparent 6px);
+}
+
+/* Barcode: ZPL (20,10) h=60  →  left=16px top=8px h=48px */
+.lm-barcode {
+  position: absolute;
+  left: 16px; top: 8px;
+  width: 151px; height: 48px;
+}
+.lm-barcode svg { width: 100%; height: 48px; display: block; }
+
+/* All label text: line-height:1 so element height = font-size exactly.
+   ZPL→px scale: 1 dot = 0.801px (203dpi at 64px/cm). */
+
+/* GW/NW: ZPL (20,75) font=12 → left=16px top=60px font=10px  (60+10=70 < 77 ✓) */
 .lm-gw {
-  font-size: 6.5px;
-  font-weight: 700;
-  color: #111;
+  position: absolute;
+  left: 16px; top: 60px;
+  font-size: 10px; font-weight: 700; line-height: 1; color: #111;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.lm-sku-f1 {
-  font-size: 6px;
-  color: #444;
+/* MBJ+SKU: ZPL (228,10) font=12 → left=183px top=8px font=10px */
+.lm-header {
+  position: absolute;
+  left: 183px; top: 8px;
+  font-size: 10px; line-height: 1; color: #444;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: 160px; overflow: hidden; text-overflow: ellipsis;
 }
 
-.lm-sku-r {
-  font-size: 6px;
-  color: #777;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
+/* Item name: ZPL (228,25) font=18 → left=183px top=20px font=14px  (20+14=34 ✓) */
 .lm-name {
-  font-size: 8.5px;
-  font-weight: 700;
-  color: #111;
+  position: absolute;
+  left: 183px; top: 20px;
+  font-size: 14px; font-weight: 700; line-height: 1; color: #111;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: 160px; overflow: hidden; text-overflow: ellipsis;
 }
 
-.lm-metal {
-  font-size: 7px;
-  color: #333;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
+/* Stone: ZPL (228,46) font=12 → left=183px top=37px font=10px  (37+10=47 ✓) */
 .lm-stone {
-  font-size: 7px;
-  color: #555;
-  font-style: italic;
-  min-height: 0;
+  position: absolute;
+  left: 183px; top: 37px;
+  font-size: 10px; line-height: 1; color: #555;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: 160px; overflow: hidden; text-overflow: ellipsis;
 }
-
 .lm-stone:empty { display: none; }
 
-.lm-bottom-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 6.5px;
-  color: #444;
+/* Date: no-stone default top=37px; JS sets top=47px when stone present  (47+9=56 < 77 ✓) */
+.lm-date {
+  position: absolute;
+  left: 183px; top: 37px;
+  font-size: 9px; line-height: 1; color: #444;
+  white-space: nowrap;
+}
+
+/* Category in neck: ZPL (440,42) → font=10px */
+.lm-cat {
+  font-size: 10px; font-weight: 700; line-height: 1; color: #111;
+  white-space: nowrap;
 }
 
 .print-zpl-section { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
@@ -1159,7 +1129,7 @@ a:hover { text-decoration: underline; }
   .report-card-wide { grid-column: 1; }
 
   .print-body { grid-template-columns: 1fr; }
-  .print-preview-section { border-right: none; border-bottom: 1px solid var(--border); }
+  .print-preview-section { border-right: none; border-bottom: 1px solid var(--border); overflow-x: auto; }
 }
 
 @media (max-width: 640px) {

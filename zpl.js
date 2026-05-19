@@ -2,25 +2,18 @@
 
 /**
  * ZPL II label for Zebra GC420t — fold-over jewellery tag loaded LANDSCAPE.
+ * Physical tag: 54mm box (432 dots) × 12mm tall (96 dots). Fold at 27mm (216 dots).
  *
- * Neck is on the RIGHT — box left edge = x=0. PW=800 prevents centering offset.
- * Box = 55mm × 13mm (440 × 104 dots). Fold at x=220 (exact centre).
- *
- * FACE 1    x=0–219    (27.5mm) — shop name, barcode, GW
- * FOLD LINE x=220               — dotted vertical line
- * FACE 2    x=223–439  (27.5mm) — SKU, name, metal/purity, stone, date/category
- * NECK      x=440+              — loop/hole area, no printing
+ * FACE 1  x=0–216   (27mm) — barcode (20,10 h60), GW/NW (20,75)
+ * FOLD    x=216             — solid vertical line, height=96
+ * FACE 2  x=228–432 (25mm) — SKU (228,10), name (228,25), stone/date below
+ * NECK    x=432+            — category (440,42)
  */
 function generateZPL(item) {
-  const PW   = 800;   // 100mm — must equal physical media width to avoid centering
-  const LL   = 120;   // 15mm — full physical label pitch (not just the 13mm box)
-  const HALF = 220;   // fold line at exact box midpoint (27.5mm)
-  const L2   = HALF + 3;   // = 223, Face 2 start
-  const FACE = HALF - 3;   // = 217, usable dots per half-face
-
-  const lc  = (y, f, t) => `^FO2,${y}${f}^FB${FACE},1,0,L,0^FD${t}^FS`;
-  const rl  = (y, f, t) => `^FO${L2},${y}${f}^FD${t}^FS`;
-  const rr  = (y, f, t) => `^FO${L2},${y}${f}^FB${440 - L2 - 2},1,0,R,0^FD${t}^FS`;
+  const PW   = 800;
+  const LL   = 120;  // label pitch (incl. gap); printable area is ~96 dots (12mm)
+  const FOLD = 216;  // physical fold at 27mm = 216 dots
+  const F2X  = 228;  // face-2 content starts 1.5mm (12 dots) after fold
 
   function barcodePayload(skuStr) {
     const m = skuStr.match(/JS-(\d{8})-(\d+)/);
@@ -34,15 +27,10 @@ function generateZPL(item) {
   }
 
   const sku         = (item.sku         || '').toString().trim();
-  const metal       = (item.metal       || '').toString().trim();
-  const purity      = (item.purity      || '').toString().trim();
   const grossWeight = item.gross_weight != null ? `${Number(item.gross_weight).toFixed(2)}g` : '—';
   const netWeight   = `${Number(item.net_weight || 0).toFixed(2)}g`;
-  const itemName    = (item.item_name || item.name || '').toString().trim().slice(0, 22);
+  const itemName    = (item.item_name || item.name || '').toString().trim().slice(0, 16);
   const category    = (item.category   || '').toString().trim();
-
-  const metalPurity = [metal, purity].filter(Boolean).join('/');
-  const metalLine   = metalPurity ? `${metalPurity}  NW:${netWeight}` : `NW:${netWeight}`;
 
   let dateDisplay = '';
   if (item.date_added) {
@@ -67,32 +55,23 @@ function generateZPL(item) {
   lines.push(`^LL${LL}`);
   lines.push('^LH0,0');
 
-  // ── FACE 1 (front) — x=0 to x=220 ──────────────────────────────────────
-  // y=30 clears the printer's physical top margin (~20-25 dots)
-  lines.push(lc(30, '^A0N,9,7', 'M.BAJRANGLAL SONS'));
+  // ── FACE 1 — barcode fills face, GW/NW below ─────────────────────────────
+  lines.push(`^FO20,10^BY1,2^BCN,60,N,N,N^FD${bc}^FS`);
+  lines.push(`^FO20,75^A0N,12,9^FDGW:${grossWeight}  NW:${netWeight}^FS`);
 
-  lines.push(`^FO4,42^BY1,2^BCN,44,N,N,N^FD${bc}^FS`);
+  // ── SOLID FOLD LINE at physical centre (x=216, height=96) ─────────────────
+  lines.push(`^FO${FOLD},0^GB2,96,2^FS`);
 
-  // GW bold (double-print for weight)
-  lines.push(lc(89, '^A0N,10,8', `GW:${grossWeight}`));
-  lines.push(`^FO3,89^A0N,10,8^FB${FACE},1,0,L,0^FDGW:${grossWeight}^FS`);
+  // ── FACE 2 — fits within 204 dots (432−228) ──────────────────────────────
+  lines.push(`^FO${F2X},10^A0N,12,9^FDMBJ ${sku}^FS`);
+  lines.push(`^FO${F2X},25^A0N,18,13^FD${itemName}^FS`);
 
-  lines.push(lc(102, '^A0N,8,7', sku));
+  let ny = 46;
+  if (hasStone)    { lines.push(`^FO${F2X},${ny}^A0N,12,9^FD${stoneLine}^FS`); ny += 13; }
+  if (dateDisplay)   lines.push(`^FO${F2X},${ny}^A0N,12,9^FD${dateDisplay}^FS`);
 
-  // ── DOTTED FOLD LINE at x=HALF(220) ──────────────────────────────────────
-  for (let y = 0; y < LL; y += 8) {
-    if (y + 4 <= LL) lines.push(`^FO${HALF},${y}^GB1,4,1^FS`);
-  }
-
-  // ── FACE 2 (back) — details side ──────────────────────────────────────────
-  lines.push(rl(30, '^A0N,9,7',  sku));
-  lines.push(rl(42, '^A0N,13,10', itemName));
-  lines.push(rl(58, '^A0N,10,8', metalLine));
-
-  let ny = 71;
-  if (hasStone) { lines.push(rl(ny, '^A0N,10,8', stoneLine)); ny += 13; }
-  if (dateDisplay) lines.push(rl(ny,  '^A0N,9,7', dateDisplay));
-  if (category)    lines.push(rr(ny,  '^A0N,9,7', category));
+  // ── NECK — category just past box right edge ──────────────────────────────
+  if (category) lines.push(`^FO440,42^A0N,12,9^FD${category}^FS`);
 
   lines.push('^XZ');
   return lines.join('\n');

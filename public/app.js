@@ -687,23 +687,19 @@ async function openPrintModal(sku) {
     const gw = it.gross_weight != null ? `${Number(it.gross_weight).toFixed(2)}g` : '—';
     const nw = `${Number(it.net_weight || 0).toFixed(2)}g`;
 
-    $('lm-sku').textContent    = `GW: ${gw}`;
-    $('lm-sku-f1').textContent = sku;
-    $('lm-sku-r').textContent  = sku;
-    $('lm-name').textContent  = (it.name || '').slice(0, 22);
+    $('lm-gw').textContent     = `GW:${gw}  NW:${nw}`;
+    $('lm-header').textContent = `MBJ ${sku}`;
+    $('lm-name').textContent   = (it.name || '').slice(0, 18);
 
-    const metalPurity = [it.metal, it.purity].filter(Boolean).join(' / ');
-    $('lm-metal').textContent = metalPurity
-      ? `${metalPurity}  NW: ${nw}`
-      : `NW: ${nw}`;
-
-    const hasStone = it.stone_type && it.stone_type !== 'None';
+    const hasStone = !!(it.stone_type && it.stone_type !== 'None');
     if (hasStone) {
-      const sw = it.stone_weight != null ? `  ${Number(it.stone_weight).toFixed(2)}ct` : '';
-      const sp = it.stone_price  != null ? `  Rs. ${formatINR(it.stone_price)}` : '';
-      $('lm-stone').textContent = `${it.stone_type}${sw}${sp}`;
+      const sw = it.stone_weight != null ? ` ${Number(it.stone_weight).toFixed(2)}ct` : '';
+      const sp = it.stone_price  != null ? ` Rs.${formatINR(it.stone_price)}` : '';
+      $('lm-stone').textContent  = `${it.stone_type}${sw}${sp}`;
+      $('lm-date').style.top     = '47px';   /* ZPL ny=59 × 0.801 */
     } else {
-      $('lm-stone').textContent = '';
+      $('lm-stone').textContent  = '';
+      $('lm-date').style.top     = '37px';   /* ZPL ny=46 × 0.801 */
     }
 
     let dateDisplay = '';
@@ -725,7 +721,7 @@ async function openPrintModal(sku) {
     JsBarcode('#barcode-svg', barcodePayload(sku), {
       format: 'CODE128',
       width: 0.9,
-      height: 28,
+      height: 48,
       displayValue: false,
       margin: 0,
       background: '#fff',

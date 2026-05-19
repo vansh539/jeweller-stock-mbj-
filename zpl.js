@@ -53,8 +53,7 @@ function generateZPL(item) {
   lines.push('^XA');
   lines.push(`^PW${PW}`);
   lines.push(`^LL${LL}`);
-  lines.push('^LH0,0');
-  lines.push('^LS-80');  // compensate for 10mm printer left-offset on GC420t (negative = right shift)
+  lines.push('^LH0,2');  // shift 0.2mm down to align on physical tag
 
   // ── FACE 1 — barcode fills face, GW/NW below ─────────────────────────────
   lines.push(`^FO20,10^BY1,2^BCN,60,N,N,N^FD${bc}^FS`);
@@ -65,7 +64,7 @@ function generateZPL(item) {
 
   // ── FACE 2 — fits within 204 dots (432−228) ──────────────────────────────
   lines.push(`^FO${F2X},10^A0N,12,9^FDMBJ ${sku}^FS`);
-  lines.push(`^FO${F2X},25^A0N,18,10^FD${itemName}^FS`);
+  lines.push(`^FO${F2X},22^A0N,20,10^FD${itemName}^FS`);
 
   let ny = 46;
   if (hasStone)    { lines.push(`^FO${F2X},${ny}^A0N,12,9^FD${stoneLine}^FS`); ny += 13; }

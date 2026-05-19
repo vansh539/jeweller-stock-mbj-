@@ -6,7 +6,7 @@
  *
  * FACE 1  x=0–216   (27mm) — barcode (20,10 h60), GW/NW (20,75)
  * FOLD    x=216             — solid vertical line, height=96
- * FACE 2  x=228–432 (25mm) — SKU (228,10), name (228,25), stone/date below
+ * FACE 2  x=228–432 (25mm) — SKU (228,10), name (228,25) A0N,18,10 max20c, stone/date below
  * NECK    x=432+            — category (440,42)
  */
 function generateZPL(item) {
@@ -29,7 +29,7 @@ function generateZPL(item) {
   const sku         = (item.sku         || '').toString().trim();
   const grossWeight = item.gross_weight != null ? `${Number(item.gross_weight).toFixed(2)}g` : '—';
   const netWeight   = `${Number(item.net_weight || 0).toFixed(2)}g`;
-  const itemName    = (item.item_name || item.name || '').toString().trim().slice(0, 16);
+  const itemName    = (item.item_name || item.name || '').toString().trim().slice(0, 20);
   const category    = (item.category   || '').toString().trim();
 
   let dateDisplay = '';
@@ -64,7 +64,7 @@ function generateZPL(item) {
 
   // ── FACE 2 — fits within 204 dots (432−228) ──────────────────────────────
   lines.push(`^FO${F2X},10^A0N,12,9^FDMBJ ${sku}^FS`);
-  lines.push(`^FO${F2X},25^A0N,18,13^FD${itemName}^FS`);
+  lines.push(`^FO${F2X},25^A0N,18,10^FD${itemName}^FS`);
 
   let ny = 46;
   if (hasStone)    { lines.push(`^FO${F2X},${ny}^A0N,12,9^FD${stoneLine}^FS`); ny += 13; }

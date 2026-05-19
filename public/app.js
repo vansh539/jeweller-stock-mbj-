@@ -689,7 +689,7 @@ async function openPrintModal(sku) {
 
     $('lm-gw').textContent     = `GW:${gw}  NW:${nw}`;
     $('lm-header').textContent = `MBJ ${sku}`;
-    $('lm-name').textContent   = (it.name || '').slice(0, 18);
+    $('lm-name').textContent   = (it.name || '').slice(0, 20);
 
     const hasStone = !!(it.stone_type && it.stone_type !== 'None');
     if (hasStone) {

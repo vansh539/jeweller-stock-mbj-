@@ -203,7 +203,7 @@
             </div>
             <div id="f-stones-container" class="stones-container">
               <div class="stone-col-headers">
-                <span>Type</span><span>Pcs</span><span>Wt/pc (ct)</span><span>₹ / ct</span><span>Total</span><span></span>
+                <span>Type</span><span>Pcs</span><span>Wt/pc</span><span>Unit</span><span>₹ / ct</span><span>Total</span><span></span>
               </div>
               <div class="stones-empty" id="f-stones-empty">No stones — click "+ Add Stone" to add</div>
             </div>
@@ -225,8 +225,7 @@
           </div>
 
           <div class="form-group">
-            <label for="f-mrp">MRP (₹)</label>
-            <input type="number" id="f-mrp" name="mrp" placeholder="e.g. 85000" min="0" step="1" />
+            <input type="hidden" id="f-mrp" name="mrp" />
           </div>
 
           <div class="form-group">
@@ -385,7 +384,7 @@
             </div>
             <div id="e-stones-container" class="stones-container">
               <div class="stone-col-headers">
-                <span>Type</span><span>Pcs</span><span>Wt/pc (ct)</span><span>₹ / ct</span><span>Total</span><span></span>
+                <span>Type</span><span>Pcs</span><span>Wt/pc</span><span>Unit</span><span>₹ / ct</span><span>Total</span><span></span>
               </div>
               <div class="stones-empty" id="e-stones-empty">No stones — click "+ Add Stone" to add</div>
             </div>
@@ -407,8 +406,7 @@
           </div>
 
           <div class="form-group">
-            <label for="e-mrp">MRP (₹)</label>
-            <input type="number" id="e-mrp" name="mrp" min="0" step="1" />
+            <input type="hidden" id="e-mrp" name="mrp" />
           </div>
 
           <div class="form-group">
@@ -479,6 +477,12 @@
             <h3 class="section-label">ZPL Raw Code</h3>
             <button class="btn btn-secondary btn-sm" id="copy-zpl-btn">Copy ZPL</button>
           </div>
+          <div class="printer-offset-row">
+            <label for="printer-x-offset">Printer X Offset:</label>
+            <input type="number" id="printer-x-offset" step="0.5" value="0" />
+            <span>mm &nbsp;(+ = right, − = left)</span>
+            <button class="btn btn-secondary btn-sm" id="apply-offset-btn">Apply</button>
+          </div>
           <textarea id="zpl-textarea" class="zpl-textarea" readonly spellcheck="false"></textarea>
 
           <div class="print-instructions">
@@ -513,14 +517,6 @@
         <input type="hidden" id="inv-sku" name="sku" />
         <div class="form-grid">
           <div class="form-group">
-            <label for="inv-customer">Customer Name <span class="req">*</span></label>
-            <input type="text" id="inv-customer" name="customer_name" placeholder="e.g. Rahul Sharma" required />
-          </div>
-          <div class="form-group">
-            <label for="inv-phone">Customer Phone</label>
-            <input type="tel" id="inv-phone" name="customer_phone" placeholder="e.g. 9876543210" />
-          </div>
-          <div class="form-group">
             <label for="inv-rate">Today's Rate (₹/g) <span class="req">*</span></label>
             <input type="number" id="inv-rate" name="per_gram_rate" placeholder="e.g. 6800" min="0" step="1" required />
           </div>
@@ -547,7 +543,7 @@
             </div>
             <div id="inv-stones-container" class="stones-container">
               <div class="stone-col-headers">
-                <span>Type</span><span>Pcs</span><span>Wt/pc (ct)</span><span>₹ / ct</span><span>Total</span><span></span>
+                <span>Type</span><span>Pcs</span><span>Wt/pc</span><span>Unit</span><span>₹ / ct</span><span>Total</span><span></span>
               </div>
               <div class="stones-empty" id="inv-stones-empty">No stones — click "+ Add Stone" to add</div>
             </div>
@@ -562,9 +558,10 @@
         <div class="inv-calc" id="inv-calc">
           <div class="inv-calc-title">Price Breakup</div>
           <div class="inv-calc-row"><span>Gold Value</span><span id="calc-gold">—</span></div>
-          <div class="inv-calc-row"><span>Wastage</span><span id="calc-wastage">—</span></div>
           <div class="inv-calc-row"><span>Making Charges</span><span id="calc-making">—</span></div>
           <div class="inv-calc-row"><span>Stone Price</span><span id="calc-stone">—</span></div>
+          <div class="inv-calc-row"><span>CGST (1.5%)</span><span id="calc-cgst">—</span></div>
+          <div class="inv-calc-row"><span>SGST (1.5%)</span><span id="calc-sgst">—</span></div>
           <div class="inv-calc-row inv-calc-total"><span>Total</span><span id="calc-total">—</span></div>
         </div>
 

@@ -167,9 +167,7 @@
         ? row('Stone', `${esc(inv.stone_type)}${inv.stone_weight ? ' / ' + Number(inv.stone_weight).toFixed(2) + 'ct' : ''}`)
         : '';
 
-      const wastageRow = inv.wastage_pct
-        ? row(`Wastage (${Number(inv.wastage_pct).toFixed(1)}%)`, fmtOrDash(inv.wastage_amount))
-        : '';
+      const goldDisplay = (inv.gold_value || 0) + (inv.wastage_amount || 0);
 
       const makingRow = inv.making_charges
         ? row('Making Charges', fmtOrDash(inv.making_charges))
@@ -189,12 +187,6 @@
         ${row('Date', inv.date_created)}
         <hr class="divider" />
 
-        <!-- Customer -->
-        <div class="bold mt4">Customer</div>
-        <div class="mt4">${esc(inv.customer_name)}</div>
-        ${inv.customer_phone ? `<div class="small">${esc(inv.customer_phone)}</div>` : ''}
-        <hr class="divider" />
-
         <!-- Item -->
         <div class="bold mt4">Item Details</div>
         <div class="mt4 bold">${esc(inv.name || '—')}</div>
@@ -211,10 +203,11 @@
         <div class="mt4">
           ${row('Rate', inv.per_gram_rate ? '₹' + Number(inv.per_gram_rate).toLocaleString('en-IN') + '/g' : null)}
           ${row('Final Weight', inv.weight_used != null ? Number(inv.weight_used).toFixed(2) + ' g' : null)}
-          ${row('Gold Value', fmtOrDash(inv.gold_value))}
-          ${wastageRow}
+          ${row('Gold Value', fmtOrDash(goldDisplay))}
           ${makingRow}
           ${stoneValRow}
+          ${row('CGST (1.5%)', fmtOrDash(inv.cgst_amount))}
+          ${row('SGST (1.5%)', fmtOrDash(inv.sgst_amount))}
         </div>
 
         <div class="total-row">

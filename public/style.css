@@ -571,7 +571,7 @@ a:hover { text-decoration: underline; }
 
 .stone-col-headers {
   display: grid;
-  grid-template-columns: 1fr 54px 90px 100px 72px 28px;
+  grid-template-columns: 1fr 54px 68px 44px 100px 72px 28px;
   gap: 6px;
   margin-bottom: 4px;
 }
@@ -599,7 +599,7 @@ a:hover { text-decoration: underline; }
 
 .stone-row {
   display: grid;
-  grid-template-columns: 1fr 54px 90px 100px 72px 28px;
+  grid-template-columns: 1fr 54px 68px 44px 100px 72px 28px;
   gap: 6px;
   align-items: center;
 }
@@ -643,6 +643,34 @@ a:hover { text-decoration: underline; }
   flex-shrink: 0;
 }
 .btn-remove-stone:hover { background: #f1b0b7; }
+
+.stone-unit {
+  padding: 7px 4px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  background: #fff;
+  color: var(--text);
+  width: 100%;
+  cursor: pointer;
+}
+.stone-unit:focus { outline: none; border-color: var(--primary); }
+
+.printer-offset-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.printer-offset-row input[type=number] {
+  width: 62px;
+  padding: 5px 8px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+}
 
 .form-actions {
   display: flex;

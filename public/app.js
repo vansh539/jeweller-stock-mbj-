@@ -235,8 +235,12 @@ function addStoneRow(prefix, data = {}) {
            placeholder="Stone type" autocomplete="off" value="${esc(data.type || '')}">
     <input type="number" class="stone-pieces"  placeholder="Pcs" min="1" step="1"
            value="${data.pieces != null ? data.pieces : 1}">
-    <input type="number" class="stone-weight"  placeholder="Wt/pc (ct)" min="0" step="0.001"
+    <input type="number" class="stone-weight"  placeholder="Wt/pc" min="0" step="0.001"
            value="${data.weight != null ? data.weight : ''}">
+    <select class="stone-unit">
+      <option value="ct">ct</option>
+      <option value="g">g</option>
+    </select>
     <input type="number" class="stone-ppc"     placeholder="₹ / ct" min="0" step="1"
            value="${data.price_per_ct != null ? data.price_per_ct : ''}">
     <span class="stone-value">—</span>
@@ -245,10 +249,12 @@ function addStoneRow(prefix, data = {}) {
   container.appendChild(row);
 
   const calcRow = () => {
-    const pcs = parseInt(row.querySelector('.stone-pieces').value)  || 1;
-    const wt  = parseFloat(row.querySelector('.stone-weight').value) || 0;
-    const ppc = parseFloat(row.querySelector('.stone-ppc').value)    || 0;
-    const tot = pcs * wt * ppc;
+    const pcs   = parseInt(row.querySelector('.stone-pieces').value)  || 1;
+    const wt    = parseFloat(row.querySelector('.stone-weight').value) || 0;
+    const unit  = row.querySelector('.stone-unit').value;
+    const wt_ct = unit === 'g' ? wt / 0.2 : wt;
+    const ppc   = parseFloat(row.querySelector('.stone-ppc').value)    || 0;
+    const tot   = pcs * wt_ct * ppc;
     row.querySelector('.stone-value').textContent = tot > 0
       ? '₹' + tot.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
       : '—';
@@ -257,6 +263,7 @@ function addStoneRow(prefix, data = {}) {
 
   row.querySelector('.stone-pieces').addEventListener('input', calcRow);
   row.querySelector('.stone-weight').addEventListener('input', calcRow);
+  row.querySelector('.stone-unit').addEventListener('change', calcRow);
   row.querySelector('.stone-ppc').addEventListener('input', calcRow);
   row.querySelector('.stone-type').addEventListener('change', e => saveCustomOpt('stone', e.target.value));
   row.querySelector('.btn-remove-stone').addEventListener('click', () => {
@@ -283,8 +290,10 @@ function getStonesFromForm(prefix) {
     const type   = row.querySelector('.stone-type').value.trim();
     const pieces = parseInt(row.querySelector('.stone-pieces').value)  || 1;
     const wt     = parseFloat(row.querySelector('.stone-weight').value) || 0;
+    const unit   = row.querySelector('.stone-unit')?.value || 'ct';
+    const wt_ct  = unit === 'g' ? wt / 0.2 : wt;  // always store in carats
     const ppc    = parseFloat(row.querySelector('.stone-ppc').value)    || 0;
-    if (type || wt || ppc) stones.push({ type, pieces, weight: wt, price_per_ct: ppc });
+    if (type || wt || ppc) stones.push({ type, pieces, weight: wt_ct, price_per_ct: ppc });
   });
   return stones;
 }
@@ -744,7 +753,11 @@ async function openPrintModal(sku) {
   } catch (e) {
     zplText = `// Network error: ${e.message}`;
   }
-  $('zpl-textarea').value = zplText;
+  rawZpl = zplText;
+  const savedOffset = parseFloat(localStorage.getItem('mbj_printer_x_offset') || '0');
+  const offsetInput = $('printer-x-offset');
+  if (offsetInput) offsetInput.value = savedOffset;
+  applyOffsetToTextarea(savedOffset);
 
   // Update lpr command
   $('lpr-cmd').textContent = `echo '${sku}.zpl' | lpr -P ZebraGC420t -l`;
@@ -757,6 +770,24 @@ function closePrintModal() {
   printModal.hidden = true;
   document.body.style.overflow = '';
   currentSku = null;
+}
+
+let rawZpl = '';
+
+function applyOffsetToTextarea(offsetMm) {
+  const dots = Math.round(offsetMm * (203 / 25.4));
+  const shifted = rawZpl.replace(/\^FO(-?\d+),/g, (_, x) => `^FO${parseInt(x) + dots},`);
+  $('zpl-textarea').value = shifted;
+}
+
+const applyOffsetBtn = $('apply-offset-btn');
+if (applyOffsetBtn) {
+  applyOffsetBtn.addEventListener('click', () => {
+    const val = parseFloat($('printer-x-offset').value) || 0;
+    localStorage.setItem('mbj_printer_x_offset', val);
+    applyOffsetToTextarea(val);
+    toast(`Offset ${val >= 0 ? '+' : ''}${val}mm applied`, 'success');
+  });
 }
 
 $('print-close').addEventListener('click',  closePrintModal);
@@ -912,16 +943,21 @@ function calcInvoice() {
   const stones  = getStonesFromForm('inv');
   const stone   = stones.reduce((s, st) => s + (st.pieces || 1) * (st.weight || 0) * (st.price_per_ct || 0), 0);
 
-  const gold    = rate * weight;
-  const wastage = (wPct / 100) * gold;
-  const total   = gold + wastage + making + stone;
+  const gold     = rate * weight;
+  const wastage  = (wPct / 100) * gold;
+  const goldDisp = gold + wastage;
+  const subtotal = goldDisp + making + stone;
+  const cgst     = subtotal * 0.015;
+  const sgst     = subtotal * 0.015;
+  const total    = subtotal + cgst + sgst;
 
   const fmt = v => v > 0 ? formatINR(v) : '—';
-  $('calc-gold').textContent    = fmt(gold);
-  $('calc-wastage').textContent = wPct > 0 ? fmt(wastage) : '—';
-  $('calc-making').textContent  = making > 0 ? fmt(making) : '—';
-  $('calc-stone').textContent   = stone > 0 ? fmt(stone) : '—';
-  $('calc-total').textContent   = total > 0 ? formatINR(total) : '—';
+  $('calc-gold').textContent   = fmt(goldDisp);
+  $('calc-making').textContent = making > 0 ? fmt(making) : '—';
+  $('calc-stone').textContent  = stone  > 0 ? fmt(stone)  : '—';
+  $('calc-cgst').textContent   = subtotal > 0 ? fmt(cgst) : '—';
+  $('calc-sgst').textContent   = subtotal > 0 ? fmt(sgst) : '—';
+  $('calc-total').textContent  = total   > 0 ? formatINR(total) : '—';
 }
 
 function calcInvMaking() {
@@ -945,8 +981,6 @@ async function openInvoiceModal(sku) {
   const item = data.item;
   $('invoice-sku-title').textContent = sku;
   $('inv-sku').value          = sku;
-  $('inv-customer').value     = '';
-  $('inv-phone').value        = '';
   $('inv-rate').value         = '';
   $('inv-weight').value       = item.net_weight  != null ? item.net_weight  : '';
   $('inv-wastage').value      = item.wastage_pct != null ? item.wastage_pct : '';
@@ -965,7 +999,7 @@ async function openInvoiceModal(sku) {
 
   invoiceModal.hidden = false;
   document.body.style.overflow = 'hidden';
-  setTimeout(() => $('inv-customer').focus(), 50);
+  setTimeout(() => $('inv-rate').focus(), 50);
 }
 
 function closeInvoiceModal() {
@@ -983,8 +1017,6 @@ invoiceForm.addEventListener('submit', async e => {
 
   const body = {
     sku:            $('inv-sku').value.trim(),
-    customer_name:  $('inv-customer').value.trim(),
-    customer_phone: $('inv-phone').value.trim() || null,
     per_gram_rate:  Number($('inv-rate').value),
     weight_used:    Number($('inv-weight').value),
     wastage_pct:    Number($('inv-wastage').value) || 0,
@@ -993,7 +1025,6 @@ invoiceForm.addEventListener('submit', async e => {
     notes:          $('inv-notes').value.trim() || null,
   };
 
-  if (!body.customer_name)  { showError('invoice-error', 'Customer name is required.'); return; }
   if (!body.per_gram_rate)  { showError('invoice-error', 'Enter today\'s rate per gram.'); return; }
   if (!body.weight_used)    { showError('invoice-error', 'Enter the final weight.'); return; }
 

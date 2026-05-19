@@ -538,13 +538,12 @@ app.post('/api/print', express.text({ type: '*/*', limit: '512kb' }), (req, res)
 app.post('/api/invoice', (req, res) => {
   try {
     const {
-      sku, customer_name, customer_phone,
+      sku,
       per_gram_rate, weight_used, wastage_pct,
       making_charges, stone_price, notes,
     } = req.body;
 
     if (!sku)           return res.status(400).json({ success: false, error: 'sku is required' });
-    if (!customer_name) return res.status(400).json({ success: false, error: 'customer_name is required' });
     if (!per_gram_rate || isNaN(Number(per_gram_rate)))
                         return res.status(400).json({ success: false, error: 'per_gram_rate is required' });
     if (!weight_used || isNaN(Number(weight_used)))
@@ -561,7 +560,10 @@ app.post('/api/invoice', (req, res) => {
 
     const gold_value     = rate * weight;
     const wastage_amount = (wPct / 100) * gold_value;
-    const amount_paid    = gold_value + wastage_amount + making + stone;
+    const subtotal       = gold_value + wastage_amount + making + stone;
+    const cgst_amount    = Math.round(subtotal * 0.015);
+    const sgst_amount    = Math.round(subtotal * 0.015);
+    const amount_paid    = subtotal + cgst_amount + sgst_amount;
 
     const invoice_no   = generateInvoiceNo();
     const date_created = new Date().toISOString().slice(0, 10);
@@ -569,8 +571,6 @@ app.post('/api/invoice', (req, res) => {
     const invoice = {
       invoice_no,
       sku,
-      customer_name:  customer_name.trim(),
-      customer_phone: customer_phone ? customer_phone.toString().trim() : null,
       per_gram_rate:  rate,
       weight_used:    weight,
       wastage_pct:    wPct,
@@ -578,6 +578,8 @@ app.post('/api/invoice', (req, res) => {
       making_charges: making,
       stone_price:    stone,
       gold_value,
+      cgst_amount,
+      sgst_amount,
       amount_paid,
       date_created,
       notes:        notes ? notes.trim() : null,

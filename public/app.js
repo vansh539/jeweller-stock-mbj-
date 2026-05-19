@@ -724,11 +724,11 @@ async function openPrintModal(sku) {
   try {
     JsBarcode('#barcode-svg', barcodePayload(sku), {
       format: 'CODE128',
-      width: 1,
-      height: 30,
+      width: 0.9,
+      height: 28,
       displayValue: false,
-      margin: 1,
-      background: '#fffef8',
+      margin: 0,
+      background: '#fff',
       lineColor: '#000',
     });
   } catch (err) {

@@ -54,6 +54,7 @@ function generateZPL(item) {
   lines.push(`^PW${PW}`);
   lines.push(`^LL${LL}`);
   lines.push('^LH0,0');
+  lines.push('^LS80');  // compensate for 10mm printer left-offset on GC420t
 
   // ── FACE 1 — barcode fills face, GW/NW below ─────────────────────────────
   lines.push(`^FO20,10^BY1,2^BCN,60,N,N,N^FD${bc}^FS`);

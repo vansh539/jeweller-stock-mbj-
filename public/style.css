@@ -835,26 +835,28 @@ a:hover { text-decoration: underline; }
 }
 
 /*
- * Label mockup — 55mm printable box + 45mm neck tab, neck on RIGHT
- * Box is full height; neck is ~25% of box height, centered on right edge.
+ * Label mockup — 54mm printable box + neck tab, neck on RIGHT
+ * PW=744 dots × 0.801px/dot = 596px total media width
+ * Box is full height; neck is ~16% of box height, centered on right edge.
  * Absolute positioning lets box border show above/below neck junction.
  */
 /* ─── Label preview ─────────────────────────────────────────────────────────
-   Physical tag: 8cm × 1.2cm box, 2.6cm neck, 0.2cm neck height, fold at 2.7cm
+   Physical tag: 93mm wide (PW=744) × 1.3cm tall, fold at 2.7cm (216 dots)
    Scale: 1cm = 64px  →  1 ZPL dot (203dpi = 0.1252mm) = 0.801px
+   Total mockup width: 744 × 0.801 = 596px
    ───────────────────────────────────────────────────────────────────────── */
 .label-mockup {
   position: relative;
-  width: 512px;   /* 8cm × 64 */
-  height: 77px;   /* 1.2cm × 64 */
+  width: 596px;   /* PW=744 dots × 0.801px */
+  height: 83px;   /* 1.3cm × 64px/cm */
   font-family: 'Courier New', Courier, monospace;
 }
 
-/* Printable box: 5.4cm × 1.2cm = 346px × 77px */
+/* Printable box: 5.4cm × 1.3cm = 346px × 83px */
 .lm-box {
   position: absolute;
   left: 0; top: 0;
-  width: 346px; height: 77px;
+  width: 346px; height: 83px;
   background: #fdfaf3;
   border: 1.5px solid #bbb;
   border-radius: 3px;
@@ -863,12 +865,12 @@ a:hover { text-decoration: underline; }
   z-index: 2;
 }
 
-/* Neck: 2.6cm × 0.2cm = 166px × 13px, centred vertically on box */
+/* Neck: 250px × 13px, centred vertically on box (344px to 596px edge) */
 .lm-neck {
   position: absolute;
   left: 344px;
-  top: 32px;
-  width: 166px;
+  top: 35px;
+  width: 250px;
   height: 13px;
   background: #fdfaf3;
   border: 1.5px solid #bbb;
@@ -894,66 +896,83 @@ a:hover { text-decoration: underline; }
   background: var(--bg-stripe, #f0ede6);
 }
 
-/* Fold score line: dotted to look like a physical crease */
+/* Fold score line: x=216 dots × 0.801 = 173px (unchanged) */
 .lm-fold {
   position: absolute;
   left: 173px; top: 0;
-  width: 1px; height: 77px;
+  width: 1px; height: 83px;
   background: repeating-linear-gradient(to bottom, #777 0px, #777 3px, transparent 3px, transparent 6px);
 }
 
-/* Barcode: ZPL (20,10) h=60  →  left=16px top=8px h=48px */
+/* All label text: line-height:1 so element height = font-size exactly.
+   ZPL to px scale: 1 dot = 0.801px (203dpi at 64px/cm). */
+
+/* Face 1 — company name: ZPL (8,2) font=10 → left=6px top=2px font=8px */
+.lm-company {
+  position: absolute;
+  left: 6px; top: 2px;
+  font-size: 8px; font-weight: 700; line-height: 1; color: #111;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+/* Barcode: ZPL (3,14) h=56 → left=2px top=11px h=45px */
 .lm-barcode {
   position: absolute;
-  left: 16px; top: 8px;
-  width: 151px; height: 48px;
+  left: 2px; top: 11px;
+  width: 169px; height: 45px;
 }
-.lm-barcode svg { width: 100%; height: 48px; display: block; }
+.lm-barcode svg { width: 100%; height: 45px; display: block; }
 
-/* All label text: line-height:1 so element height = font-size exactly.
-   ZPL→px scale: 1 dot = 0.801px (203dpi at 64px/cm). */
-
-/* GW/NW: ZPL (20,75) font=12 → left=16px top=60px font=10px  (60+10=70 < 77 ✓) */
-.lm-gw {
+/* Face 1 — SKU below barcode: ZPL (8,72) font=10 → left=6px top=58px font=8px */
+.lm-sku {
   position: absolute;
-  left: 16px; top: 60px;
-  font-size: 10px; font-weight: 700; line-height: 1; color: #111;
+  left: 6px; top: 58px;
+  font-size: 8px; line-height: 1; color: #444;
   white-space: nowrap;
+  max-width: 165px; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* MBJ+SKU: ZPL (228,10) font=12 → left=183px top=8px font=10px */
-.lm-header {
-  position: absolute;
-  left: 183px; top: 8px;
-  font-size: 10px; line-height: 1; color: #444;
-  white-space: nowrap;
-  max-width: 160px; overflow: hidden; text-overflow: ellipsis;
-}
-
-/* Item name: ZPL (228,22) font=20 → left=183px top=18px font=16px  (18+16=34 ✓) */
+/* Face 2 — Item name: ZPL (228,2) font=20 → left=183px top=2px font=16px */
 .lm-name {
   position: absolute;
-  left: 183px; top: 18px;
+  left: 183px; top: 2px;
   font-size: 16px; font-weight: 700; line-height: 1; color: #111;
   white-space: nowrap;
   max-width: 160px; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* Stone: ZPL (228,46) font=12 → left=183px top=37px font=10px  (37+10=47 ✓) */
-.lm-stone {
+/* Face 2 — GW: ZPL (228,24) font=12 → left=183px top=19px font=9px */
+.lm-gw {
   position: absolute;
-  left: 183px; top: 37px;
-  font-size: 10px; line-height: 1; color: #555;
+  left: 183px; top: 19px;
+  font-size: 9px; font-weight: 700; line-height: 1; color: #111;
   white-space: nowrap;
-  max-width: 160px; overflow: hidden; text-overflow: ellipsis;
 }
-.lm-stone:empty { display: none; }
 
-/* Date: no-stone default top=37px; JS sets top=47px when stone present  (47+9=56 < 77 ✓) */
+/* Face 2 — SW (stone weight, shown only if stone present):
+   ZPL (228,38) font=12 → left=183px top=30px font=9px */
+.lm-sw {
+  position: absolute;
+  left: 183px; top: 30px;
+  font-size: 9px; line-height: 1; color: #555;
+  white-space: nowrap;
+}
+.lm-sw:empty { display: none; }
+
+/* Face 2 — NW: JS sets top=30px (no stone) or 42px (stone present) */
+.lm-nw {
+  position: absolute;
+  left: 183px; top: 30px;
+  font-size: 9px; font-weight: 700; line-height: 1; color: #111;
+  white-space: nowrap;
+}
+
+/* Face 2 — Date: JS sets top=42px (no stone) or 53px (stone present) */
 .lm-date {
   position: absolute;
-  left: 183px; top: 37px;
-  font-size: 9px; line-height: 1; color: #444;
+  left: 183px; top: 42px;
+  font-size: 8px; line-height: 1; color: #444;
   white-space: nowrap;
 }
 

@@ -7,6 +7,7 @@ module.exports = {
       script:      'server.js',
       cwd:         __dirname,
       watch:       false,
+      exec_mode:   'fork',
       instances:   1,
       autorestart: true,
       max_restarts: 10,

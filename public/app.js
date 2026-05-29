@@ -696,19 +696,26 @@ async function openPrintModal(sku) {
     const gw = it.gross_weight != null ? `${Number(it.gross_weight).toFixed(2)}g` : '—';
     const nw = `${Number(it.net_weight || 0).toFixed(2)}g`;
 
-    $('lm-gw').textContent     = `GW:${gw}  NW:${nw}`;
-    $('lm-header').textContent = `MBJ ${sku}`;
-    $('lm-name').textContent   = (it.name || '').slice(0, 20);
+    // Face 1: company name (static), barcode (rendered below), SKU below barcode
+    $('lm-company').textContent = 'MBJ';
+    $('lm-sku').textContent     = sku;
+
+    // Face 2: item name at top, then GW, SW (if stone), NW
+    $('lm-name').textContent = (it.name || '').slice(0, 16);
+    $('lm-gw').textContent   = `GW: ${gw}`;
 
     const hasStone = !!(it.stone_type && it.stone_type !== 'None');
     if (hasStone) {
-      const sw = it.stone_weight != null ? ` ${Number(it.stone_weight).toFixed(2)}ct` : '';
-      const sp = it.stone_price  != null ? ` Rs.${formatINR(it.stone_price)}` : '';
-      $('lm-stone').textContent  = `${it.stone_type}${sw}${sp}`;
-      $('lm-date').style.top     = '47px';   /* ZPL ny=59 × 0.801 */
+      const sw = it.stone_weight != null ? `${Number(it.stone_weight).toFixed(2)}ct` : '';
+      $('lm-sw').textContent    = sw ? `SW: ${sw}` : '';
+      $('lm-nw').textContent    = `NW: ${nw}`;
+      $('lm-nw').style.top      = '42px';   /* ZPL y=52 × 0.801 */
+      $('lm-date').style.top    = '53px';   /* ZPL y=66 × 0.801 */
     } else {
-      $('lm-stone').textContent  = '';
-      $('lm-date').style.top     = '37px';   /* ZPL ny=46 × 0.801 */
+      $('lm-sw').textContent    = '';
+      $('lm-nw').textContent    = `NW: ${nw}`;
+      $('lm-nw').style.top      = '30px';   /* ZPL y=38 × 0.801 */
+      $('lm-date').style.top    = '42px';   /* ZPL y=52 × 0.801 */
     }
 
     let dateDisplay = '';
@@ -730,7 +737,7 @@ async function openPrintModal(sku) {
     JsBarcode('#barcode-svg', barcodePayload(sku), {
       format: 'CODE128',
       width: 0.9,
-      height: 48,
+      height: 45,
       displayValue: false,
       margin: 0,
       background: '#fff',

@@ -43,7 +43,7 @@ function generateZPL(item) {
 
   // ── FACE 1 — company name, barcode, SKU ──────────────────────────────────
   lines.push(`^FO4,2^A0N,14,10^FDMBJ^FS`);
-  lines.push(`^FO2,18^BY2,2^BCN,52,N,N,N^FD${bc}^FS`);
+  lines.push(`^FO2,18^BY2,3^BCN,52,N,N,N^FD>:${bc}^FS`);  // >: forces Code128C (pairs) — BY2 ratio 3 standard
   lines.push(`^FO4,74^A0N,16,12^FD${sku}^FS`);
 
   // ── FOLD LINE at x=216, height=102 ────────────────────────────────────────

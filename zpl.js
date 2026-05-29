@@ -17,8 +17,8 @@ function generateZPL(item) {
 
   function barcodePayload(skuStr) {
     const m = skuStr.match(/JS-(\d{8})-(\d+)/);
-    if (m) return `${m[1].slice(2)}${m[2].padStart(4, '0')}`;  // YYMMDD+NNNN = 10 digits, fits BY2 in Face 1
-    return skuStr.replace(/[^A-Z0-9]/g, '').slice(0, 10);
+    if (m) return m[2].padStart(4, '0');  // 4-digit seq: Code128B at BY2 = 198 dots, fits 216-dot Face 1
+    return skuStr.replace(/[^0-9]/g, '').padStart(4, '0').slice(-4);
   }
 
   const sku         = (item.sku         || '').toString().trim();
@@ -43,7 +43,7 @@ function generateZPL(item) {
 
   // ── FACE 1 — company name, barcode, SKU ──────────────────────────────────
   lines.push(`^FO4,2^A0N,14,10^FDMBJ^FS`);
-  lines.push(`^FO2,18^BY2,3^BCN,52,N,N,N^FD>:${bc}^FS`);  // >: forces Code128C (pairs) — BY2 ratio 3 standard
+  lines.push(`^FO2,18^BY2,3^BCN,52,N,N,N^FD${bc}^FS`);
   lines.push(`^FO4,74^A0N,16,12^FD${sku}^FS`);
 
   // ── FOLD LINE at x=216, height=102 ────────────────────────────────────────

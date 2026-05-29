@@ -17,8 +17,8 @@ function generateZPL(item) {
 
   function barcodePayload(skuStr) {
     const m = skuStr.match(/JS-(\d{8})-(\d+)/);
-    if (m) return `${m[1]}${m[2].padStart(4, '0')}`;
-    return skuStr.replace(/[^A-Z0-9]/g, '').slice(0, 12);
+    if (m) return `${m[1].slice(2)}${m[2].padStart(4, '0')}`;  // YYMMDD+NNNN = 10 digits, fits BY2 in Face 1
+    return skuStr.replace(/[^A-Z0-9]/g, '').slice(0, 10);
   }
 
   const sku         = (item.sku         || '').toString().trim();

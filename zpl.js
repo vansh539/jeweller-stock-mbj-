@@ -49,23 +49,24 @@ function generateZPL(item) {
   lines.push('^LS0');
 
   // ── FACE 1 (y fits: 12+2+38+2+10 = 64) ──────────────────────────────────
-  lines.push(`^FO${F1X},0^A0N,12,9^FDMBJ^FS`);
-  lines.push(`^FO${F1X},14^BY1,3^BCN,38,N,N,N^FD${bc}^FS`);
-  lines.push(`^FO${F1X},54^A0N,10,8^FD${sku}^FS`);
+  // BY2 Code128B 4-digit = ~198 dots; at x=2 ends at x=200 < 216 fold ✓
+  lines.push(`^FO4,0^A0N,12,9^FDMBJ^FS`);
+  lines.push(`^FO2,14^BY2,3^BCN,38,N,N,N^FD${bc}^FS`);
+  lines.push(`^FO4,54^A0N,10,8^FD${sku}^FS`);
 
   // ── FOLD LINE ─────────────────────────────────────────────────────────────
   lines.push(`^FO${FOLD},0^GB2,64,2^FS`);
 
   // ── FACE 2 ────────────────────────────────────────────────────────────────
   if (hasStone && stoneWeight) {
-    lines.push(`^FO${F2X},0^A0N,18,12^FD${itemName}^FS`);
-    lines.push(`^FO${F2X},20^A0N,14,10^FDGW:${grossWeight}^FS`);
-    lines.push(`^FO${F2X},36^A0N,14,10^FDSW:${stoneWeight}ct^FS`);
-    lines.push(`^FO${F2X},52^A0N,12,9^FDNW:${netWeight}^FS`);
+    lines.push(`^FO${F2X},0^A0N,20,14^FD${itemName}^FS`);
+    lines.push(`^FO${F2X},22^A0N,16,11^FDGW:${grossWeight}^FS`);
+    lines.push(`^FO${F2X},40^A0N,16,11^FDSW:${stoneWeight}ct^FS`);
+    lines.push(`^FO${F2X},56^A0N,12,9^FDNW:${netWeight}^FS`);
   } else {
-    lines.push(`^FO${F2X},0^A0N,22,15^FD${itemName}^FS`);
-    lines.push(`^FO${F2X},24^A0N,16,11^FDGW:${grossWeight}^FS`);
-    lines.push(`^FO${F2X},42^A0N,16,11^FDNW:${netWeight}^FS`);
+    lines.push(`^FO${F2X},0^A0N,24,16^FD${itemName}^FS`);
+    lines.push(`^FO${F2X},26^A0N,18,12^FDGW:${grossWeight}^FS`);
+    lines.push(`^FO${F2X},46^A0N,18,12^FDNW:${netWeight}^FS`);
   }
 
   // ── NECK ──────────────────────────────────────────────────────────────────

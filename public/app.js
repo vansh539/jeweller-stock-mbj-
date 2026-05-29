@@ -1119,6 +1119,30 @@ async function init() {
     if (el) el.addEventListener('input', () => recalcAll('e'));
   });
 
+  const calibrateBtn = document.getElementById('calibrate-printer-btn');
+  if (calibrateBtn) {
+    calibrateBtn.addEventListener('click', async () => {
+      calibrateBtn.disabled = true;
+      calibrateBtn.textContent = '⚙ Calibrating…';
+      try {
+        const r = await fetch('/api/calibrate-printer', { method: 'POST' });
+        const j = await r.json();
+        if (j.success) {
+          calibrateBtn.textContent = '✓ Done';
+          setTimeout(() => { calibrateBtn.textContent = '⚙ Calibrate'; calibrateBtn.disabled = false; }, 3000);
+        } else {
+          alert('Calibration failed: ' + j.error);
+          calibrateBtn.textContent = '⚙ Calibrate';
+          calibrateBtn.disabled = false;
+        }
+      } catch {
+        alert('Could not reach server.');
+        calibrateBtn.textContent = '⚙ Calibrate';
+        calibrateBtn.disabled = false;
+      }
+    });
+  }
+
   scanInput.focus();
   scanClear.style.display = 'none';
   await Promise.all([loadItems(), refreshStats(), fetchGoldRates()]);

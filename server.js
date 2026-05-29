@@ -532,6 +532,33 @@ app.post('/api/print', express.text({ type: '*/*', limit: '512kb' }), (req, res)
   });
 });
 
+// ─── Calibrate printer (one-time NVRAM LH reset) ─────────────────────────────
+
+app.post('/api/calibrate-printer', (req, res) => {
+  const http = require('http');
+  const resetZpl = '^XA^LH0,0^JUS^XZ';
+  http.get('http://localhost:9100/default?type=printer', (zbpRes) => {
+    let raw = '';
+    zbpRes.on('data', c => raw += c);
+    zbpRes.on('end', () => {
+      let device;
+      try { device = JSON.parse(raw); } catch {
+        return res.status(503).json({ success: false, error: 'Zebra Browser Print returned invalid data.' });
+      }
+      if (!device || !device.name) return res.status(503).json({ success: false, error: 'No default printer set in Zebra Browser Print.' });
+      const payload = JSON.stringify({ device, data: resetZpl });
+      const opts = {
+        hostname: 'localhost', port: 9100, path: '/write', method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+      };
+      const wr = http.request(opts, wrRes => { wrRes.resume(); wrRes.on('end', () => res.json({ success: true })); });
+      wr.on('error', err => res.status(503).json({ success: false, error: err.message }));
+      wr.write(payload);
+      wr.end();
+    });
+  }).on('error', () => res.status(503).json({ success: false, error: 'Zebra Browser Print not running.' }));
+});
+
 // ─── Invoice routes ───────────────────────────────────────────────────────────
 
 // POST /api/invoice — compute invoice in memory, no DB storage

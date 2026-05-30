@@ -10,7 +10,7 @@
  *   Printable height: 64 dots (y=0–64 in ZPL = physical y=40–104)
  *   Printable Face 1: x=90–216 = 126 dots
  *
- * FACE 1  x=90–216  — company, barcode (BY1), SKU
+ * FACE 1  x=90–216  — MBJ, barcode (BY1 = 99 dots, x=90→189), 4-digit SKU
  * FOLD    x=216     — vertical line
  * FACE 2  x=228–432 — name, GW, NW (or GW, SW, NW)
  * NECK    x=432+    — category
@@ -48,21 +48,23 @@ function generateZPL(item) {
   lines.push('^LH0,40');  // clear 5mm top dead zone; y=0–64 is printable
   lines.push('^LS0');
 
-  // ── FACE 1 (y fits: 12+2+38+2+10 = 64) ──────────────────────────────────
-  // BY2 Code128B 4-digit = ~198 dots; at x=2 ends at x=200 < 216 fold ✓
-  lines.push(`^FO4,0^A0N,12,9^FDMBJ^FS`);
-  lines.push(`^FO2,14^BY2,3^BCN,38,N,N,N^FD${bc}^FS`);
-  lines.push(`^FO4,54^A0N,10,8^FD${sku}^FS`);
+  // ── FACE 1  x=90–216 (126 printable dots), y=0–63 ───────────────────────
+  // BY1 Code128B 4-digit = 99 dots; x=90→189 < 216 fold ✓
+  // MBJ: y=0→12  barcode: y=13→51  sku: y=53→63
+  lines.push(`^FO${F1X},0^A0N,12,9^FDMBJ^FS`);
+  lines.push(`^FO${F1X},13^BY1,3^BCN,38,N,N,N^FD${bc}^FS`);
+  lines.push(`^FO${F1X},53^A0N,10,7^FD${sku}^FS`);
 
   // ── FOLD LINE ─────────────────────────────────────────────────────────────
   lines.push(`^FO${FOLD},0^GB2,64,2^FS`);
 
   // ── FACE 2 ────────────────────────────────────────────────────────────────
   if (hasStone && stoneWeight) {
-    lines.push(`^FO${F2X},0^A0N,20,14^FD${itemName}^FS`);
-    lines.push(`^FO${F2X},22^A0N,16,11^FDGW:${grossWeight}^FS`);
-    lines.push(`^FO${F2X},40^A0N,16,11^FDSW:${stoneWeight}ct^FS`);
-    lines.push(`^FO${F2X},56^A0N,12,9^FDNW:${netWeight}^FS`);
+    // name: y=0→18  GW: y=19→35  SW: y=36→52  NW: y=52→64 ✓ (was 56→68, cut off)
+    lines.push(`^FO${F2X},0^A0N,18,12^FD${itemName}^FS`);
+    lines.push(`^FO${F2X},19^A0N,16,11^FDGW:${grossWeight}^FS`);
+    lines.push(`^FO${F2X},36^A0N,16,11^FDSW:${stoneWeight}ct^FS`);
+    lines.push(`^FO${F2X},52^A0N,12,9^FDNW:${netWeight}^FS`);
   } else {
     lines.push(`^FO${F2X},0^A0N,24,16^FD${itemName}^FS`);
     lines.push(`^FO${F2X},26^A0N,18,12^FDGW:${grossWeight}^FS`);

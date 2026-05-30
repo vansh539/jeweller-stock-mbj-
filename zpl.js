@@ -4,27 +4,23 @@
  * ZPL II label for Zebra GC420t — fold-over jewellery tag loaded LANDSCAPE.
  * Physical tag: 93mm wide × 13mm tall (744 × 104 dots). Fold at 27mm (216 dots).
  *
- * Printer hardware limits (this unit):
- *   Top dead zone : 40 dots (5mm)  → ^LH0,40 shifts origin to first printable row
- *   Left dead zone: 88 dots (11mm) → Face 1 content starts at x=90 (first visible dot)
- *   Printable height: 64 dots (y=0–64 in ZPL = physical y=40–104)
- *   Printable Face 1: x=90–216 = 126 dots
+ * ^LH0,2  — 2-dot y-shift only (clears media top edge, preserves full 102-dot print height)
+ * DO NOT use ^LH0,40 — it pushes all content to the vertical centre of the tag.
  *
- * FACE 1  x=90–216  — MBJ, barcode (BY1 = 99 dots, x=90→189), 4-digit SKU
- * FOLD    x=216     — vertical line
+ * FACE 1  x=0–216  — MBJ (8,2), barcode BY2 (2,14 h=56), SKU (8,72)
+ * FOLD    x=216     — vertical GB line, height=102
  * FACE 2  x=228–432 — name, GW, NW (or GW, SW, NW)
- * NECK    x=432+    — category
+ * NECK    x=432+    — category (440,42)
  */
 function generateZPL(item) {
   const PW   = 744;
   const LL   = 120;
   const FOLD = 216;
-  const F1X  = 90;   // first printable dot in Face 1
   const F2X  = 228;
 
   function barcodePayload(skuStr) {
     const m = skuStr.match(/JS-(\d{8})-(\d+)/);
-    if (m) return m[2].padStart(4, '0');  // 4-digit seq; BY1 Code128B = 99 dots, fits 126-dot Face 1
+    if (m) return m[2].padStart(4, '0');
     return skuStr.replace(/[^0-9]/g, '').padStart(4, '0').slice(-4);
   }
 
@@ -45,34 +41,36 @@ function generateZPL(item) {
   lines.push('^XA');
   lines.push(`^PW${PW}`);
   lines.push(`^LL${LL}`);
-  lines.push('^LH0,40');  // clear 5mm top dead zone; y=0–64 is printable
+  lines.push('^LH0,2');
   lines.push('^LS0');
 
-  // ── FACE 1  x=90–216 (126 printable dots), y=0–63 ───────────────────────
-  // BY1 Code128B 4-digit = 99 dots; x=90→189 < 216 fold ✓
-  // MBJ: y=0→12  barcode: y=13→51  sku: y=53→63
-  lines.push(`^FO${F1X},0^A0N,12,9^FDMBJ^FS`);
-  lines.push(`^FO${F1X},13^BY1,3^BCN,38,N,N,N^FD${bc}^FS`);
-  lines.push(`^FO${F1X},53^A0N,10,7^FD${sku}^FS`);
+  // ── FACE 1 (x=0–216) ─────────────────────────────────────────────────────
+  // MBJ:     y=2  h=10  bottom=12
+  // Barcode: y=14 h=56  bottom=70  (BY2 4-digit Code128B = 198 dots; x=2→200 < fold ✓)
+  // SKU:     y=72 h=10  bottom=82  (physical y=74→84 < 104 ✓)
+  lines.push(`^FO8,2^A0N,10,8^FDMBJ^FS`);
+  lines.push(`^FO2,14^BY2,3^BCN,56,N,N,N^FD${bc}^FS`);
+  lines.push(`^FO8,72^A0N,10,8^FD${sku}^FS`);
 
   // ── FOLD LINE ─────────────────────────────────────────────────────────────
-  lines.push(`^FO${FOLD},0^GB2,64,2^FS`);
+  lines.push(`^FO${FOLD},0^GB2,102,2^FS`);
 
-  // ── FACE 2 ────────────────────────────────────────────────────────────────
+  // ── FACE 2 (x=228–432) ────────────────────────────────────────────────────
   if (hasStone && stoneWeight) {
-    // name: y=0→18  GW: y=19→35  SW: y=36→52  NW: y=52→64 ✓ (was 56→68, cut off)
-    lines.push(`^FO${F2X},0^A0N,18,12^FD${itemName}^FS`);
-    lines.push(`^FO${F2X},19^A0N,16,11^FDGW:${grossWeight}^FS`);
-    lines.push(`^FO${F2X},36^A0N,16,11^FDSW:${stoneWeight}ct^FS`);
-    lines.push(`^FO${F2X},52^A0N,12,9^FDNW:${netWeight}^FS`);
+    // name: y=2→22  GW: y=24→38  SW: y=40→54  NW: y=56→68  (physical bottom=70 < 104 ✓)
+    lines.push(`^FO${F2X},2^A0N,20,14^FD${itemName}^FS`);
+    lines.push(`^FO${F2X},24^A0N,14,10^FDGW:${grossWeight}^FS`);
+    lines.push(`^FO${F2X},40^A0N,14,10^FDSW:${stoneWeight}ct^FS`);
+    lines.push(`^FO${F2X},56^A0N,12,9^FDNW:${netWeight}^FS`);
   } else {
-    lines.push(`^FO${F2X},0^A0N,24,16^FD${itemName}^FS`);
-    lines.push(`^FO${F2X},26^A0N,18,12^FDGW:${grossWeight}^FS`);
-    lines.push(`^FO${F2X},46^A0N,18,12^FDNW:${netWeight}^FS`);
+    // name: y=2→26  GW: y=28→46  NW: y=48→66  (physical bottom=68 < 104 ✓)
+    lines.push(`^FO${F2X},2^A0N,24,16^FD${itemName}^FS`);
+    lines.push(`^FO${F2X},28^A0N,18,12^FDGW:${grossWeight}^FS`);
+    lines.push(`^FO${F2X},48^A0N,18,12^FDNW:${netWeight}^FS`);
   }
 
   // ── NECK ──────────────────────────────────────────────────────────────────
-  if (category) lines.push(`^FO440,26^A0N,12,9^FD${category}^FS`);
+  if (category) lines.push(`^FO440,42^A0N,12,9^FD${category}^FS`);
 
   lines.push('^XZ');
   return lines.join('\n');

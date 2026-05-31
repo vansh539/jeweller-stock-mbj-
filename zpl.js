@@ -2,24 +2,23 @@
 
 /**
  * ZPL II label for Zebra GC420t — fold-over jewellery tag loaded LANDSCAPE.
- * Physical tag: 93mm wide × 13mm tall (744 × 104 dots). Fold at 27mm (216 dots).
+ * Physical: 93mm wide × 13mm tall (744 × 104 dots @203dpi). Fold at x=216.
  *
- * Printer hardware limits (this unit):
- *   Top dead zone : 40 dots (5mm)  → ^LH0,40 shifts origin to first printable row
- *   Left dead zone: 88 dots (11mm) → Face 1 content starts at x=90 (first visible dot)
- *   Printable height: 64 dots (y=0–64 in ZPL = physical y=40–104)
- *   Printable Face 1: x=90–216 = 126 dots
+ * Hardware dead zones on this unit:
+ *   Top  : 40 dots → ^LH0,40 shifts ZPL origin to first printable row
+ *   Left : 88 dots → Face 1 content must start at x≥90
  *
- * FACE 1  x=0–216   — company, barcode, SKU
- * FOLD    x=216     — vertical line
- * FACE 2  x=228–432 — name, GW, NW (or GW, SW, NW)
- * NECK    x=432+    — category
+ * FACE 1  x=90–214   — item name, barcode, SKU
+ * FOLD    x=216      — vertical line
+ * FACE 2  x=224–430  — category+purity (top), GW / SW / NW
+ * NECK    x=440+     — blank
  */
 function generateZPL(item) {
   const PW   = 744;
   const LL   = 120;
   const FOLD = 216;
-  const F2X  = 228;
+  const F1X  = 90;
+  const F2X  = 224;
 
   function barcodePayload(skuStr) {
     const m = skuStr.match(/JS-(\d{8})-(\d+)/);
@@ -27,48 +26,46 @@ function generateZPL(item) {
     return skuStr.replace(/[^0-9]/g, '').padStart(4, '0').slice(-4);
   }
 
-  const sku         = (item.sku         || '').toString().trim();
-  const grossWeight = item.gross_weight != null ? `${Number(item.gross_weight).toFixed(2)}g` : '—';
-  const netWeight   = `${Number(item.net_weight || 0).toFixed(2)}g`;
-  const itemName    = (item.item_name || item.name || '').toString().trim().slice(0, 16);
-  const category    = (item.category   || '').toString().trim();
+  const sku      = (item.sku || '').toString().trim();
+  const itemName = (item.item_name || item.name || '').toString().trim().slice(0, 16);
+  const category = (item.category || '').toString().trim();
+  const purity   = (item.purity   || '').toString().replace(/[^0-9]/g, '');
+  const gw       = item.gross_weight != null ? Number(item.gross_weight).toFixed(3) : '—';
+  const nw       = Number(item.net_weight || 0).toFixed(3);
 
   const hasStone = !!(item.stone_type && item.stone_type !== 'None');
-  const stoneWeight = hasStone && item.stone_weight != null
-    ? `${Number(item.stone_weight).toFixed(2)}`
-    : null;
+  const sw       = hasStone && item.stone_weight != null
+                   ? Number(item.stone_weight).toFixed(3) : null;
 
-  const bc = barcodePayload(sku);
+  const bc      = barcodePayload(sku);
+  const catLine = purity ? `${category}  ${purity}` : category;
+
   const lines = [];
-
   lines.push('^XA');
   lines.push(`^PW${PW}`);
   lines.push(`^LL${LL}`);
   lines.push('^LH0,40');
   lines.push('^LS0');
 
-  // ── FACE 1 ────────────────────────────────────────────────────────────────
-  lines.push(`^FO4,0^A0N,12,9^FDMBJ^FS`);
-  lines.push(`^FO2,14^BY2,3^BCN,38,N,N,N^FD${bc}^FS`);
-  lines.push(`^FO4,54^A0N,10,8^FD${sku}^FS`);
+  // ── FACE 1: item name / barcode / SKU ────────────────────────────────────
+  lines.push(`^FO${F1X},2^A0N,14,11^FD${itemName}^FS`);
+  lines.push(`^FO${F1X},18^BY1,3^BCN,34,N,N,N^FD${bc}^FS`);
+  lines.push(`^FO${F1X},54^A0N,10,8^FD${sku}^FS`);
 
   // ── FOLD LINE ─────────────────────────────────────────────────────────────
   lines.push(`^FO${FOLD},0^GB2,64,2^FS`);
 
-  // ── FACE 2 ────────────────────────────────────────────────────────────────
-  if (hasStone && stoneWeight) {
-    lines.push(`^FO${F2X},0^A0N,20,14^FD${itemName}^FS`);
-    lines.push(`^FO${F2X},22^A0N,16,11^FDGW:${grossWeight}^FS`);
-    lines.push(`^FO${F2X},40^A0N,16,11^FDSW:${stoneWeight}ct^FS`);
-    lines.push(`^FO${F2X},56^A0N,12,9^FDNW:${netWeight}^FS`);
+  // ── FACE 2: category+purity / weights ────────────────────────────────────
+  if (sw) {
+    lines.push(`^FO${F2X},0^A0N,18,13^FD${catLine}^FS`);
+    lines.push(`^FO${F2X},19^A0N,14,11^FDGW:${gw}^FS`);
+    lines.push(`^FO${F2X},35^A0N,14,11^FDSW:${sw}^FS`);
+    lines.push(`^FO${F2X},51^A0N,12,9^FDNW:${nw}^FS`);
   } else {
-    lines.push(`^FO${F2X},0^A0N,24,16^FD${itemName}^FS`);
-    lines.push(`^FO${F2X},26^A0N,18,12^FDGW:${grossWeight}^FS`);
-    lines.push(`^FO${F2X},46^A0N,18,12^FDNW:${netWeight}^FS`);
+    lines.push(`^FO${F2X},0^A0N,20,15^FD${catLine}^FS`);
+    lines.push(`^FO${F2X},22^A0N,16,12^FDGW:${gw}^FS`);
+    lines.push(`^FO${F2X},44^A0N,16,12^FDNW:${nw}^FS`);
   }
-
-  // ── NECK ──────────────────────────────────────────────────────────────────
-  if (category) lines.push(`^FO440,26^A0N,12,9^FD${category}^FS`);
 
   lines.push('^XZ');
   return lines.join('\n');

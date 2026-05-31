@@ -693,38 +693,33 @@ async function openPrintModal(sku) {
   if (itemRes.ok) {
     const it = itemRes.data.item;
 
-    const gw = it.gross_weight != null ? `${Number(it.gross_weight).toFixed(2)}g` : '—';
-    const nw = `${Number(it.net_weight || 0).toFixed(2)}g`;
+    const gw = it.gross_weight != null ? Number(it.gross_weight).toFixed(3) : '—';
+    const nw = Number(it.net_weight || 0).toFixed(3);
+    const purity   = (it.purity || '').toString().replace(/[^0-9]/g, '');
+    const catLine  = purity ? `${it.category || ''}  ${purity}` : (it.category || '');
+    const itemName = (it.item_name || it.name || '').slice(0, 16);
 
-    // Face 1: company name (static), barcode (rendered below), SKU below barcode
-    $('lm-company').textContent = 'MBJ';
+    // Face 1: item name, barcode (rendered below), SKU
+    $('lm-company').textContent = itemName;
     $('lm-sku').textContent     = sku;
 
-    // Face 2: item name at top, then GW, SW (if stone), NW
-    $('lm-name').textContent = (it.name || '').slice(0, 16);
-    $('lm-gw').textContent   = `GW: ${gw}`;
+    // Face 2: category+purity, then GW / SW / NW
+    $('lm-name').textContent = catLine;
+    $('lm-gw').textContent   = `GW:${gw}`;
 
     const hasStone = !!(it.stone_type && it.stone_type !== 'None');
     if (hasStone) {
-      const sw = it.stone_weight != null ? `${Number(it.stone_weight).toFixed(2)}ct` : '';
-      $('lm-sw').textContent    = sw ? `SW: ${sw}` : '';
-      $('lm-nw').textContent    = `NW: ${nw}`;
-      $('lm-nw').style.top      = '42px';   /* ZPL y=52 × 0.801 */
-      $('lm-date').style.top    = '53px';   /* ZPL y=66 × 0.801 */
+      const sw = it.stone_weight != null ? Number(it.stone_weight).toFixed(3) : '';
+      $('lm-sw').textContent = sw ? `SW:${sw}` : '';
+      $('lm-nw').textContent = `NW:${nw}`;
+      $('lm-nw').style.top   = '41px';   /* ZPL y=51 × 0.801 */
     } else {
-      $('lm-sw').textContent    = '';
-      $('lm-nw').textContent    = `NW: ${nw}`;
-      $('lm-nw').style.top      = '30px';   /* ZPL y=38 × 0.801 */
-      $('lm-date').style.top    = '42px';   /* ZPL y=52 × 0.801 */
+      $('lm-sw').textContent = '';
+      $('lm-nw').textContent = `NW:${nw}`;
+      $('lm-nw').style.top   = '35px';   /* ZPL y=44 × 0.801 */
     }
-
-    let dateDisplay = '';
-    if (it.date_added) {
-      const p = it.date_added.toString().split('-');
-      dateDisplay = p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : it.date_added;
-    }
-    $('lm-date').textContent = dateDisplay;
-    $('lm-cat').textContent  = it.category || '';
+    $('lm-date').textContent = '';
+    $('lm-cat').textContent  = '';
   }
 
   // Render barcode via JsBarcode — use compact 12-digit numeric payload (matches ZPL print)
@@ -737,7 +732,7 @@ async function openPrintModal(sku) {
     JsBarcode('#barcode-svg', barcodePayload(sku), {
       format: 'CODE128',
       width: 0.9,
-      height: 45,
+      height: 27,
       displayValue: false,
       margin: 0,
       background: '#fff',

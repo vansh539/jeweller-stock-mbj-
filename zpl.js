@@ -47,19 +47,18 @@ function generateZPL(item) {
   lines.push('^MD12');
 
   // ── FACE 1: MBJ + barcode with HRT ───────────────────────────────────────
-  // 62-dot printable window → taller barcode fits (Swarna: barcode Y=5, H~18)
-  lines.push(`^FO${F1X},0^A0N,12,12^FDMBJ^FS`);
-  lines.push(`^FO${F1X},13^BY1,3^BCN,40,Y,N,N^FD${bc}^FS`);   // bars y=13→53, HRT→61 ✓
+  lines.push(`^FO${F1X},4^A0N,12,12^FDMBJ^FS`);                // y=4 (pulled down)
+  lines.push(`^FO${F1X},17^BY1,3^BCN,40,Y,N,N^FD${bc}^FS`);   // bars y=17→57, HRT→62 ✓
 
-  // ── FACE 2: all 4 fields in 62-dot window ────────────────────────────────
-  // LL=120 gives 62 usable dots vs old 46 → 35% bigger → 14pt weights vs 10pt
-  lines.push(`^FO${RX},0^A0N,16,13^FD${catLine}^FS`);          // y=0→16
-  lines.push(`^FO${RX},17^A0N,14,13^FDGW: ${gw}^FS`);          // y=17→31
+  // ── FACE 2: 4 fields, y=4 start, Shoora-matched font sizes ───────────────
+  // catLine 18pt (bigger), GW/SW 14pt, NW 10pt (last row — fits in 62 dots)
+  lines.push(`^FO${RX},4^A0N,18,13^FD${catLine}^FS`);          // y=4→22
+  lines.push(`^FO${RX},24^A0N,14,13^FDGW: ${gw}^FS`);          // y=24→38
   if (sw) {
-    lines.push(`^FO${RX},32^A0N,14,13^FDSW: ${sw}^FS`);        // y=32→46
-    lines.push(`^FO${RX},47^A0N,14,13^FDNW: ${nw}^FS`);        // y=47→61 ✓
+    lines.push(`^FO${RX},39^A0N,14,13^FDSW: ${sw}^FS`);        // y=39→53
+    lines.push(`^FO${RX},54^A0N,9,12^FDNW: ${nw}^FS`);         // y=54→63 (last row)
   } else {
-    lines.push(`^FO${RX},32^A0N,14,13^FDNW: ${nw}^FS`);        // y=32→46
+    lines.push(`^FO${RX},39^A0N,16,13^FDNW: ${nw}^FS`);        // y=39→55 (no stone: bigger NW)
   }
 
   lines.push('^XZ');

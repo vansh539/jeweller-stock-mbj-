@@ -11,8 +11,8 @@
  * Printable window: logical y=0–46 (physical y=58–104).
  * Layout uses y=14–46 (+14 top margin — significantly pulled from edge).
  *
- * Bold effect: each key text field printed twice at x and x+1,
- * doubling vertical stroke width (ZPL's cleanest bold technique).
+ * Bold effect: every text field printed twice at x and x+1.
+ * Stone items: GW+SW merged on one line → 3 rows → bigger fonts.
  */
 function generateZPL(item) {
   const PW  = 744;
@@ -47,26 +47,28 @@ function generateZPL(item) {
   lines.push('^LS0');
 
   // ── FACE 1: brand (bold) + barcode ──────────────────────────────────────
-  // y=14 — significantly pulled from top edge
   lines.push(`^FO${F1X},14^A0N,14,14^FDMBJ^FS`);
   lines.push(`^FO${F1X + 1},14^A0N,14,14^FDMBJ^FS`);         // bold, y=14→28
-  // BCN,14,N: bars 14 dots, no HRT → y=30+14=44 ✓
-  lines.push(`^FO${F1X},30^BY1,3^BCN,14,N,N,N^FD${bc}^FS`);
+  lines.push(`^FO${F1X},30^BY1,3^BCN,14,N,N,N^FD${bc}^FS`);  // y=30→44 ✓
 
-  // ── FACE 2: category+purity (bold) / weights ─────────────────────────────
+  // ── FACE 2: category+purity + weights — ALL rows bold ────────────────────
   if (sw) {
-    // Stone: 4 rows from y=14 — tight, fits in 32 usable dots
-    lines.push(`^FO${RX},14^A0N,9,9^FD${catLine}^FS`);
-    lines.push(`^FO${RX + 1},14^A0N,9,9^FD${catLine}^FS`);   // bold, y=14→23
-    lines.push(`^FO${RX},24^A0N,9,8^FDGW: ${gw}^FS`);        // y=24→33
-    lines.push(`^FO${RX},34^A0N,9,8^FDSW: ${sw}^FS`);        // y=34→43
-    lines.push(`^FO${RX},44^A0N,7,7^FDNW: ${nw}^FS`);        // y=44→51 (last row, slight clip ok)
+    // Stone: GW+SW merged onto one line → 3 rows total → fits bigger fonts
+    const gwsw = `G:${gw} S:${sw}`;
+    lines.push(`^FO${RX},14^A0N,13,12^FD${catLine}^FS`);
+    lines.push(`^FO${RX + 1},14^A0N,13,12^FD${catLine}^FS`);  // bold, y=14→27
+    lines.push(`^FO${RX},29^A0N,11,9^FD${gwsw}^FS`);
+    lines.push(`^FO${RX + 1},29^A0N,11,9^FD${gwsw}^FS`);      // bold, y=29→40
+    lines.push(`^FO${RX},41^A0N,11,9^FDNW: ${nw}^FS`);
+    lines.push(`^FO${RX + 1},41^A0N,11,9^FDNW: ${nw}^FS`);    // bold, y=41→52 (last row)
   } else {
-    // No stone: 3 rows from y=14 — big fonts, clear spacing
-    lines.push(`^FO${RX},14^A0N,15,14^FD${catLine}^FS`);
-    lines.push(`^FO${RX + 1},14^A0N,15,14^FD${catLine}^FS`); // bold, y=14→29
-    lines.push(`^FO${RX},31^A0N,13,11^FDGW: ${gw}^FS`);      // y=31→44
-    lines.push(`^FO${RX},45^A0N,7,6^FDNW: ${nw}^FS`);        // y=45→52 (last row, slight clip ok)
+    // No stone: 3 rows, large fonts, all bold
+    lines.push(`^FO${RX},14^A0N,13,12^FD${catLine}^FS`);
+    lines.push(`^FO${RX + 1},14^A0N,13,12^FD${catLine}^FS`);  // bold, y=14→27
+    lines.push(`^FO${RX},29^A0N,11,9^FDGW: ${gw}^FS`);
+    lines.push(`^FO${RX + 1},29^A0N,11,9^FDGW: ${gw}^FS`);    // bold, y=29→40
+    lines.push(`^FO${RX},41^A0N,11,9^FDNW: ${nw}^FS`);
+    lines.push(`^FO${RX + 1},41^A0N,11,9^FDNW: ${nw}^FS`);    // bold, y=41→52 (last row)
   }
 
   lines.push('^XZ');

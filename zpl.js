@@ -9,11 +9,12 @@
  *   Top  : physical y=0–54 dead → LH=58 clears it
  *
  * Printable window: logical y=0–46 (physical y=58–104).
- * Layout uses y=4–46 (small top margin, maximises usable dots for bigger text).
  *
  * ^MD12: print darkness boosted for heavier ink on each character.
  * Bold: every field printed at x and x+1 (double stroke width).
- * ^BY2: barcode module width doubled — wider bars, easier to scan.
+ * Face 2 is always 3 rows — 3 rows in 46 dots → max ~15pt per row.
+ * Stone: Face2=catLine+GW+SW, Face1=MBJ+NW+barcode.
+ * No-stone: Face2=catLine+GW+NW, Face1=MBJ+barcode.
  */
 function generateZPL(item) {
   const PW  = 744;
@@ -46,34 +47,41 @@ function generateZPL(item) {
   lines.push(`^LL${LL}`);
   lines.push('^LH0,58');  // clears top dead zone; logical y max = 46
   lines.push('^LS0');
-  lines.push('^MD12');    // boost print darkness — heavier ink, more readable
+  lines.push('^MD12');    // boost print darkness
 
-  // ── FACE 1: brand (bold) + barcode ──────────────────────────────────────
-  // ^BY2 = 2-dot module width → bars are physically twice as wide as before
-  lines.push(`^FO${F1X},4^A0N,13,13^FDMBJ^FS`);
-  lines.push(`^FO${F1X + 1},4^A0N,13,13^FDMBJ^FS`);           // bold, y=4→17
-  lines.push(`^FO${F1X},20^BY2,3^BCN,22,N,N,N^FD${bc}^FS`);   // y=20→42 ✓ (BY2=double-width bars)
-
-  // ── FACE 2: all rows separate, bold, wider chars ──────────────────────────
-  // w=13 per char (was w=9) → 44% wider letters → significantly more readable
+  // ── FACE 1: brand (bold) + NW (stone only) + barcode ────────────────────
+  // BY1 = 1-dot module width (BY2 was too wide and overflowed into Face 2)
+  lines.push(`^FO${F1X},2^A0N,12,12^FDMBJ^FS`);
+  lines.push(`^FO${F1X + 1},2^A0N,12,12^FDMBJ^FS`);           // bold, y=2→14
   if (sw) {
-    // Stone: 4 rows from y=4 — catLine+GW+SW+NW all separate
-    lines.push(`^FO${RX},4^A0N,12,12^FD${catLine}^FS`);
-    lines.push(`^FO${RX + 1},4^A0N,12,12^FD${catLine}^FS`);    // bold, y=4→16
-    lines.push(`^FO${RX},17^A0N,11,13^FDGW: ${gw}^FS`);
-    lines.push(`^FO${RX + 1},17^A0N,11,13^FDGW: ${gw}^FS`);    // bold, y=17→28
-    lines.push(`^FO${RX},29^A0N,11,13^FDSW: ${sw}^FS`);
-    lines.push(`^FO${RX + 1},29^A0N,11,13^FDSW: ${sw}^FS`);    // bold, y=29→40
-    lines.push(`^FO${RX},41^A0N,8,12^FDNW: ${nw}^FS`);
-    lines.push(`^FO${RX + 1},41^A0N,8,12^FDNW: ${nw}^FS`);     // bold, y=41→49 (last row)
+    // Stone: show NW on Face 1 to free Face 2 for 3 big rows
+    lines.push(`^FO${F1X},15^A0N,10,9^FDNW:${nw}^FS`);
+    lines.push(`^FO${F1X + 1},15^A0N,10,9^FDNW:${nw}^FS`);    // bold, y=15→25
+    lines.push(`^FO${F1X},27^BY1,3^BCN,16,N,N,N^FD${bc}^FS`); // y=27→43 ✓
   } else {
-    // No stone: 3 rows — biggest possible fonts
-    lines.push(`^FO${RX},4^A0N,14,13^FD${catLine}^FS`);
-    lines.push(`^FO${RX + 1},4^A0N,14,13^FD${catLine}^FS`);    // bold, y=4→18
-    lines.push(`^FO${RX},20^A0N,13,12^FDGW: ${gw}^FS`);
-    lines.push(`^FO${RX + 1},20^A0N,13,12^FDGW: ${gw}^FS`);    // bold, y=20→33
-    lines.push(`^FO${RX},34^A0N,13,12^FDNW: ${nw}^FS`);
-    lines.push(`^FO${RX + 1},34^A0N,13,12^FDNW: ${nw}^FS`);    // bold, y=34→47 (last row)
+    // No stone: more room → taller barcode
+    lines.push(`^FO${F1X},16^BY1,3^BCN,26,N,N,N^FD${bc}^FS`); // y=16→42 ✓
+  }
+
+  // ── FACE 2: always 3 rows — big fonts, all bold ──────────────────────────
+  // 3 rows in 46 dots → each row ~15pt → 1.9mm char height (vs 11pt before)
+  // catLine: 16pt, weights: 14pt. Bold = double-print at x and x+1.
+  if (sw) {
+    // Stone: catLine + GW + SW (NW is on Face 1)
+    lines.push(`^FO${RX},2^A0N,16,14^FD${catLine}^FS`);
+    lines.push(`^FO${RX + 1},2^A0N,16,14^FD${catLine}^FS`);    // bold, y=2→18
+    lines.push(`^FO${RX},19^A0N,14,13^FDGW:${gw}^FS`);
+    lines.push(`^FO${RX + 1},19^A0N,14,13^FDGW:${gw}^FS`);     // bold, y=19→33
+    lines.push(`^FO${RX},34^A0N,14,13^FDSW:${sw}^FS`);
+    lines.push(`^FO${RX + 1},34^A0N,14,13^FDSW:${sw}^FS`);     // bold, y=34→48 (last row)
+  } else {
+    // No stone: catLine + GW + NW
+    lines.push(`^FO${RX},2^A0N,16,14^FD${catLine}^FS`);
+    lines.push(`^FO${RX + 1},2^A0N,16,14^FD${catLine}^FS`);    // bold, y=2→18
+    lines.push(`^FO${RX},19^A0N,14,13^FDGW:${gw}^FS`);
+    lines.push(`^FO${RX + 1},19^A0N,14,13^FDGW:${gw}^FS`);     // bold, y=19→33
+    lines.push(`^FO${RX},34^A0N,14,13^FDNW:${nw}^FS`);
+    lines.push(`^FO${RX + 1},34^A0N,14,13^FDNW:${nw}^FS`);     // bold, y=34→48 (last row)
   }
 
   lines.push('^XZ');

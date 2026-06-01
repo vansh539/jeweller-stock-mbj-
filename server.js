@@ -544,7 +544,7 @@ app.post('/api/print', express.text({ type: '*/*', limit: '512kb' }), (req, res)
 
 app.post('/api/calibrate-printer', (req, res) => {
   const http = require('http');
-  const resetZpl = '^XA^LH0,0^JUS^XZ';
+  const resetZpl = '^XA^LH0,0^LS0^JUS^XZ';
   http.get('http://localhost:9100/default?type=printer', (zbpRes) => {
     let raw = '';
     zbpRes.on('data', c => raw += c);

@@ -1138,6 +1138,22 @@ async function init() {
     });
   }
 
+  async function testLabel(endpoint, btn, label) {
+    btn.disabled = true; btn.textContent = '⏳ Printing…';
+    try {
+      const r = await fetch(endpoint, { method: 'POST' });
+      const j = await r.json();
+      btn.textContent = j.success ? '✓ Sent' : '✗ ' + j.error;
+      setTimeout(() => { btn.textContent = label; btn.disabled = false; }, 3000);
+    } catch { btn.textContent = label; btn.disabled = false; }
+  }
+
+  const rulerBtn = document.getElementById('ruler-test-btn');
+  if (rulerBtn) rulerBtn.addEventListener('click', () => testLabel('/api/test-label/ruler', rulerBtn, '📏 Ruler'));
+
+  const faceBtn = document.getElementById('face-test-btn');
+  if (faceBtn) faceBtn.addEventListener('click', () => testLabel('/api/test-label/facetest', faceBtn, '🖨 Face Test'));
+
   scanInput.focus();
   scanClear.style.display = 'none';
   await Promise.all([loadItems(), refreshStats(), fetchGoldRates()]);

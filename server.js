@@ -290,9 +290,17 @@ app.get('/api/items', (req, res) => {
 });
 
 // GET /api/items/:sku
+// Also accepts 4-digit barcode payload (e.g. "0001") — resolves to most recent matching SKU
 app.get('/api/items/:sku', (req, res) => {
   try {
-    const item = stmts.bySku.get(req.params.sku);
+    let lookupSku = req.params.sku;
+    if (/^\d{4}$/.test(lookupSku)) {
+      const match = db.prepare(
+        "SELECT * FROM items WHERE sku LIKE '%-' || ? ORDER BY date_added DESC LIMIT 1"
+      ).get(lookupSku);
+      if (match) return res.json({ success: true, item: match });
+    }
+    const item = stmts.bySku.get(lookupSku);
     if (!item) {
       return res.status(404).json({ success: false, error: `Item with SKU "${req.params.sku}" not found` });
     }
@@ -557,6 +565,56 @@ app.post('/api/calibrate-printer', (req, res) => {
       wr.end();
     });
   }).on('error', () => res.status(503).json({ success: false, error: 'Zebra Browser Print not running.' }));
+});
+
+// ─── Diagnostic test labels ───────────────────────────────────────────────────
+
+function sendRawZpl(zpl, res) {
+  const http = require('http');
+  http.get('http://localhost:9100/default?type=printer', (zbpRes) => {
+    let raw = '';
+    zbpRes.on('data', c => raw += c);
+    zbpRes.on('end', () => {
+      let device;
+      try { device = JSON.parse(raw); } catch {
+        return res.status(503).json({ success: false, error: 'Zebra Browser Print returned invalid data.' });
+      }
+      if (!device || !device.name) return res.status(503).json({ success: false, error: 'No default printer set in Zebra Browser Print.' });
+      const payload = JSON.stringify({ device, data: zpl });
+      const opts = { hostname: 'localhost', port: 9100, path: '/write', method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } };
+      const wr = http.request(opts, wrRes => { wrRes.resume(); wrRes.on('end', () => res.json({ success: true })); });
+      wr.on('error', err => res.status(503).json({ success: false, error: err.message }));
+      wr.write(payload); wr.end();
+    });
+  }).on('error', () => res.status(503).json({ success: false, error: 'Zebra Browser Print not running.' }));
+}
+
+// Ruler test: black blocks every 50 dots — shows exact left dead zone boundary
+app.post('/api/test-label/ruler', (req, res) => {
+  const zpl = [
+    '^XA', '^PW744', '^LL120', '^LH0,40', '^LS0',
+    '^FO0,0^GB20,80,20^FS',
+    '^FO50,0^GB20,80,20^FS',
+    '^FO100,0^GB20,80,20^FS',
+    '^FO150,0^GB20,80,20^FS',
+    '^FO200,0^GB20,80,20^FS',
+    '^FO250,0^GB20,80,20^FS',
+    '^FO300,0^GB20,80,20^FS',
+    '^XZ'
+  ].join('\n');
+  sendRawZpl(zpl, res);
+});
+
+// Face test: large "F1" at x=90 and "F2" at x=260 — confirms which face is printable
+app.post('/api/test-label/facetest', (req, res) => {
+  const zpl = [
+    '^XA', '^PW744', '^LL120', '^LH0,40', '^LS0',
+    '^FO90,10^A0N,48,32^FDF1^FS',
+    '^FO260,10^A0N,48,32^FDF2^FS',
+    '^XZ'
+  ].join('\n');
+  sendRawZpl(zpl, res);
 });
 
 // ─── Invoice routes ───────────────────────────────────────────────────────────

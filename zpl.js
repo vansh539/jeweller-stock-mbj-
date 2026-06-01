@@ -46,19 +46,19 @@ function generateZPL(item) {
   lines.push('^LS0');
   lines.push('^MD12');
 
-  // ── FACE 1: MBJ + barcode with HRT ───────────────────────────────────────
-  lines.push(`^FO${F1X},4^A0N,12,12^FDMBJ^FS`);                // y=4 (pulled down)
-  lines.push(`^FO${F1X},17^BY1,3^BCN,40,Y,N,N^FD${bc}^FS`);   // bars y=17→57, HRT→62 ✓
+  // ── FACE 1: MBJ + barcode ────────────────────────────────────────────────
+  lines.push(`^FO${F1X},4^A0N,12,12^FDMBJ^FS`);
+  lines.push(`^FO${F1X},18^BY1,3^BCN,40,Y,N,N^FD${bc}^FS`);   // bars y=18→58, HRT→62 ✓
 
-  // ── FACE 2: 4 fields, y=4 start, Shoora-matched font sizes ───────────────
-  // catLine 18pt (bigger), GW/SW 14pt, NW 10pt (last row — fits in 62 dots)
-  lines.push(`^FO${RX},4^A0N,18,13^FD${catLine}^FS`);          // y=4→22
-  lines.push(`^FO${RX},24^A0N,14,13^FDGW: ${gw}^FS`);          // y=24→38
+  // ── FACE 2: maximised fonts in 62-dot window, y=4 start ──────────────────
+  // Rows packed tight (no gaps) to maximise height: 22+17+14+9 = 62-4 = 58
+  lines.push(`^FO${RX},4^A0N,22,13^FD${catLine}^FS`);          // y=4→26  (22pt)
+  lines.push(`^FO${RX},26^A0N,17,13^FDGW: ${gw}^FS`);          // y=26→43 (17pt)
   if (sw) {
-    lines.push(`^FO${RX},39^A0N,14,13^FDSW: ${sw}^FS`);        // y=39→53
-    lines.push(`^FO${RX},54^A0N,9,12^FDNW: ${nw}^FS`);         // y=54→63 (last row)
+    lines.push(`^FO${RX},43^A0N,14,13^FDSW: ${sw}^FS`);        // y=43→57 (14pt)
+    lines.push(`^FO${RX},57^A0N,5,12^FDNW: ${nw}^FS`);         // y=57→62 (last row)
   } else {
-    lines.push(`^FO${RX},39^A0N,16,13^FDNW: ${nw}^FS`);        // y=39→55 (no stone: bigger NW)
+    lines.push(`^FO${RX},43^A0N,19,13^FDNW: ${nw}^FS`);        // y=43→62 (no stone: bigger NW)
   }
 
   lines.push('^XZ');

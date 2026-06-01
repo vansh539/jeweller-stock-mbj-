@@ -6,15 +6,11 @@
  *
  * Dead zones on this unit:
  *   Left : stored ^LS ≈ +80 dots → x-coords pre-shifted −80
- *   Top  : physical y=0–54 dead → LH=58 clears it
+ *   Top  : physical y=0–54 dead → LH=58 clears it (calibrate printer to fix)
  *
- * Printable window: logical y=0–46 (physical y=58–104).
- *
- * ^MD12: print darkness boosted for heavier ink on each character.
- * Bold: every field printed at x and x+1 (double stroke width).
- * Face 2 is always 3 rows — 3 rows in 46 dots → max ~15pt per row.
- * Stone: Face2=catLine+GW+SW, Face1=MBJ+NW+barcode.
- * No-stone: Face2=catLine+GW+NW, Face1=MBJ+barcode.
+ * Printable window: logical y=0–46 (physical y=58–104) = 5.7mm only.
+ * Shoora-style layout: MBJ + barcode + HRT on Face1, all 4 fields on Face2.
+ * ^MD12: darker print. No bold.
  */
 function generateZPL(item) {
   const PW  = 744;
@@ -47,26 +43,22 @@ function generateZPL(item) {
   lines.push(`^LL${LL}`);
   lines.push('^LH0,58');  // clears top dead zone; logical y max = 46
   lines.push('^LS0');
-  lines.push('^MD12');    // boost print darkness
+  lines.push('^MD12');
 
-  // ── FACE 1: brand + barcode, no bold ─────────────────────────────────────
-  lines.push(`^FO${F1X},2^A0N,12,12^FDMBJ^FS`);
-  lines.push(`^FO${F1X},16^BY1,3^BCN,26,N,N,N^FD${bc}^FS`);   // y=16→42 ✓
+  // ── FACE 1: MBJ + barcode with HRT (mirrors Shoora layout) ───────────────
+  lines.push(`^FO${F1X},0^A0N,12,12^FDMBJ^FS`);                // brand at top
+  lines.push(`^FO${F1X},13^BY1,3^BCN,28,Y,N,N^FD${bc}^FS`);   // tall barcode + number below
 
-  // ── FACE 2: 3 rows — big catLine + GW + compact SW/NW ────────────────────
-  // catLine at 20pt (2.5mm) — genuinely readable.
-  // GW at 14pt — readable.
-  // SW and NW share bottom row (different units: carats vs grams) at 10pt.
-  // No stone: catLine 20pt, GW 16pt, NW 12pt — all 3 rows bigger.
-  lines.push(`^FO${RX},0^A0N,20,13^FD${catLine}^FS`);          // y=0→20
+  // ── FACE 2: all 4 fields, proportional sizing (Shoora-matched layout) ────
+  // Max 4 rows in 46 printable dots. catLine bigger, weights equal.
+  // After printer calibration (full 13mm printable) this will be much larger.
+  lines.push(`^FO${RX},0^A0N,14,13^FD${catLine}^FS`);          // y=0→14
+  lines.push(`^FO${RX},15^A0N,10,13^FDGW: ${gw}^FS`);          // y=15→25
   if (sw) {
-    lines.push(`^FO${RX},21^A0N,14,13^FDGW: ${gw}^FS`);        // y=21→35
-    const swShort = Number(sw).toFixed(2);
-    const nwShort = Number(nw).toFixed(2);
-    lines.push(`^FO${RX},36^A0N,10,13^FDS:${swShort}  N:${nwShort}^FS`); // y=36→46 ✓
+    lines.push(`^FO${RX},26^A0N,10,13^FDSW: ${sw}^FS`);        // y=26→36
+    lines.push(`^FO${RX},37^A0N,10,13^FDNW: ${nw}^FS`);        // y=37→47 (last row)
   } else {
-    lines.push(`^FO${RX},21^A0N,16,13^FDGW: ${gw}^FS`);        // y=21→37
-    lines.push(`^FO${RX},38^A0N,10,13^FDNW: ${nw}^FS`);        // y=38→48 (last row)
+    lines.push(`^FO${RX},26^A0N,10,13^FDNW: ${nw}^FS`);        // y=26→36
   }
 
   lines.push('^XZ');

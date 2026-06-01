@@ -47,24 +47,23 @@ function generateZPL(item) {
   lines.push('^LH0,40');
   lines.push('^LS0');
 
-  // ── FACE 1: item name / barcode / SKU ────────────────────────────────────
-  lines.push(`^FO${F1X},2^A0N,14,11^FD${itemName}^FS`);
-  lines.push(`^FO${F1X},18^BY1,3^BCN,34,N,N,N^FD${bc}^FS`);
-  lines.push(`^FO${F1X},54^A0N,10,8^FD${sku}^FS`);
+  // ── FACE 1: brand / barcode (HRT prints barcode number below bars) ────────
+  lines.push(`^FO${F1X},2^A0N,14,11^FDMBJ^FS`);
+  lines.push(`^FO${F1X},18^BY1,3^BCN,46,Y,N,N^FD${bc}^FS`);
 
   // ── FOLD LINE ─────────────────────────────────────────────────────────────
-  lines.push(`^FO${FOLD},0^GB2,64,2^FS`);
+  lines.push(`^FO${FOLD},0^GB2,80,2^FS`);
 
   // ── FACE 2: category+purity / weights ────────────────────────────────────
   if (sw) {
-    lines.push(`^FO${F2X},0^A0N,18,13^FD${catLine}^FS`);
-    lines.push(`^FO${F2X},19^A0N,14,11^FDGW:${gw}^FS`);
-    lines.push(`^FO${F2X},35^A0N,14,11^FDSW:${sw}^FS`);
-    lines.push(`^FO${F2X},51^A0N,12,9^FDNW:${nw}^FS`);
+    lines.push(`^FO${F2X},2^A0N,18,13^FD${catLine}^FS`);
+    lines.push(`^FO${F2X},22^A0N,14,11^FDGW: ${gw}^FS`);
+    lines.push(`^FO${F2X},38^A0N,14,11^FDSW: ${sw}^FS`);
+    lines.push(`^FO${F2X},54^A0N,12,9^FDNW: ${nw}^FS`);
   } else {
-    lines.push(`^FO${F2X},0^A0N,20,15^FD${catLine}^FS`);
-    lines.push(`^FO${F2X},22^A0N,16,12^FDGW:${gw}^FS`);
-    lines.push(`^FO${F2X},44^A0N,16,12^FDNW:${nw}^FS`);
+    lines.push(`^FO${F2X},2^A0N,20,15^FD${catLine}^FS`);
+    lines.push(`^FO${F2X},26^A0N,16,12^FDGW: ${gw}^FS`);
+    lines.push(`^FO${F2X},47^A0N,16,12^FDNW: ${nw}^FS`);
   }
 
   lines.push('^XZ');

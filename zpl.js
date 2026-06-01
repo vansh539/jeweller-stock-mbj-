@@ -1,32 +1,28 @@
 'use strict';
 
 /**
- * ZPL II label for Zebra GC420t — fold-over jewellery tag loaded LANDSCAPE.
- * Physical: 93mm wide × 13mm tall (744 × 104 dots @203dpi). Fold at x=216.
+ * ZPL II — Zebra GC420t, fold-over jewellery tag LANDSCAPE.
+ * Physical: 93mm wide × 13mm tall (744 × 104 dots @ 203dpi).
  *
- * Dead zone: Face 1 (x=0–215) does NOT print on this unit.
- * All content lives in Face 2: x=230–432 (202 printable dots = 25mm).
- * Printable height: LL(120) − LH_y(40) = 80 logical dots.
+ * Orientation: 93mm feeds ACROSS print head (PW=744), 13mm feeds THROUGH (LL=104).
+ * Top dead zone: 40 dots (5mm) → ^LH0,40 shifts y-origin.
+ * Printable height: 104 (physical) − 40 (LH) = 64 logical dots.  MAX CONTENT y = 62.
+ * Left dead zone: Face 1 (x=0–215) does NOT print. Printable x starts at ~230.
  *
- * ROWS layout (matches Shoora style):
+ * Face 2 layout (x=230–432, y=0–62):
  *
- *   x=230 ─────────────────────────────── x=432
- *   y=0   │ MBJ              Necklace  22 │
- *   y=16  │ ┌────────────────────────────┐│
- *   y=44  │ │    BY2 barcode (154 dots)  ││
- *          │ └────────────────────────────┘│
- *   y=46  │  0001  (HRT below barcode)    │
- *   y=60  │ GW: 4.190        NW: 3.780   │
- *         └────────────────────────────────┘
- *
- * BY2 width check: 4-digit Code128C = 57 modules × 2 = 114 + quiet(40) = 154 dots
- * Starting at x=230, ends at x=384 — fits within 432 ✓
+ *   x=230         x=310        x=432
+ *   │ MBJ          Necklace  22 │
+ *   │ ██████████████████        │   BY2 barcode, 154 dots wide
+ *   │ 0001                      │   HRT below (no-stone only)
+ *   │ GW: 4.190    NW: 3.780   │
+ *   └─────────────────────────  ┘
  */
 function generateZPL(item) {
   const PW  = 744;
-  const LL  = 120;
-  const LX  = 230;   // Face 2 start + 14-dot safety margin past fold (x=216)
-  const CAT = 320;   // catLine x-position (90 dots right of LX)
+  const LL  = 104;    // actual tag height: 13mm = 104 dots
+  const LX  = 230;    // barcode column x (14 dots past fold at 216)
+  const CAT = 310;    // category text x
 
   function barcodePayload(skuStr) {
     const m = skuStr.match(/JS-(\d{8})-(\d+)/);
@@ -51,30 +47,31 @@ function generateZPL(item) {
   lines.push('^XA');
   lines.push(`^PW${PW}`);
   lines.push(`^LL${LL}`);
-  lines.push('^LH0,40');   // top dead zone: shifts y-origin 40 dots down
+  lines.push('^LH0,40');  // skip 5mm top dead zone; printable = y 0–62
   lines.push('^LS0');
 
-  // ── ROW 1: brand (left) + category/purity (right) — y=0, h≈14 ────────────
-  lines.push(`^FO${LX},0^A0N,14,11^FDMBJ^FS`);
-  lines.push(`^FO${CAT},0^A0N,13,10^FD${catLine}^FS`);
-
-  // ── ROW 2: barcode BY2 — y=16, bar height=28, HRT=Y ─────────────────────
-  // BY2 + 4-digit Code128C: 154 dots wide → x=230 to x=384 ✓
-  // With HRT(~12 dots): total block ends at y=16+28+12=56
-  lines.push(`^FO${LX},16^BY2,3^BCN,28,Y,N,N^FD${bc}^FS`);
-
-  // ── ROW 3: weights — y=58+ ───────────────────────────────────────────────
   if (sw) {
-    // Stone: GW + SW on one line, NW below
-    // "GW: 4.190  SW: 0.906" = ~21 chars × 8 = 168 dots from x=230 → x=398 ✓
-    lines.push(`^FO${LX},58^A0N,10,8^FDGW: ${gw}  SW: ${sw}^FS`);
-    lines.push(`^FO${LX},69^A0N,10,8^FDNW: ${nw}^FS`);
-    // ends y=79 ✓
+    // ── STONE VARIANT ────────────────────────────────────────────────────────
+    // y=0  : MBJ + catLine (h=12) → ends y=12
+    lines.push(`^FO${LX},0^A0N,12,9^FDMBJ^FS`);
+    lines.push(`^FO${CAT},0^A0N,12,9^FD${catLine}^FS`);
+    // y=14 : barcode BY2 h=22, no HRT (saves 10 dots) → ends y=36
+    lines.push(`^FO${LX},14^BY2,3^BCN,22,N,N,N^FD${bc}^FS`);
+    // y=38 : GW + SW on one line (A0N,10,8 = 10 dots tall) → ends y=48
+    lines.push(`^FO${LX},38^A0N,10,8^FDGW: ${gw}  SW: ${sw}^FS`);
+    // y=50 : NW → ends y=60 ✓ (within 62)
+    lines.push(`^FO${LX},50^A0N,10,8^FDNW: ${nw}^FS`);
+
   } else {
-    // No stone: GW left, NW right on same line
-    lines.push(`^FO${LX},58^A0N,12,9^FDGW: ${gw}^FS`);
-    lines.push(`^FO${LX + 110},58^A0N,12,9^FDNW: ${nw}^FS`);
-    // ends y=70 ✓
+    // ── NO-STONE VARIANT ─────────────────────────────────────────────────────
+    // y=0  : MBJ + catLine (h=13) → ends y=13
+    lines.push(`^FO${LX},0^A0N,13,10^FDMBJ^FS`);
+    lines.push(`^FO${CAT},0^A0N,13,10^FD${catLine}^FS`);
+    // y=15 : barcode BY2 h=24, HRT=Y (prints seq number below) → bars end y=39, HRT ends ~y=49
+    lines.push(`^FO${LX},15^BY2,3^BCN,24,Y,N,N^FD${bc}^FS`);
+    // y=51 : GW left, NW right (A0N,10,8 = 10 dots tall) → ends y=61 ✓ (within 62)
+    lines.push(`^FO${LX},51^A0N,10,8^FDGW: ${gw}^FS`);
+    lines.push(`^FO${LX + 110},51^A0N,10,8^FDNW: ${nw}^FS`);
   }
 
   lines.push('^XZ');

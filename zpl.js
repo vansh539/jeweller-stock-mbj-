@@ -49,22 +49,24 @@ function generateZPL(item) {
   lines.push('^LS0');
   lines.push('^MD12');    // boost print darkness
 
-  // ── FACE 1: brand + barcode (MBJ bold, rest plain) ───────────────────────
+  // ── FACE 1: brand + barcode, no bold ─────────────────────────────────────
   lines.push(`^FO${F1X},2^A0N,12,12^FDMBJ^FS`);
-  lines.push(`^FO${F1X + 1},2^A0N,12,12^FDMBJ^FS`);           // MBJ bold only
-  lines.push(`^FO${F1X},16^BY1,3^BCN,26,N,N,N^FD${bc}^FS`);   // taller barcode y=16→42 ✓
+  lines.push(`^FO${F1X},16^BY1,3^BCN,26,N,N,N^FD${bc}^FS`);   // y=16→42 ✓
 
-  // ── FACE 2: all 4 fields, no bold, widest chars that fit ─────────────────
-  // 4 rows max in 46 printable dots → h=11 per row (physical max for 4 rows).
-  // w=13 for catLine (max for long names ~13 chars × 13 = 169 < 186).
-  // w=18 for weights (max 10 chars × 18 = 180 < 186) — fills horizontal space.
-  lines.push(`^FO${RX},0^A0N,11,13^FD${catLine}^FS`);          // y=0→11
-  lines.push(`^FO${RX},12^A0N,11,18^FDGW: ${gw}^FS`);          // y=12→23
+  // ── FACE 2: 3 rows — big catLine + GW + compact SW/NW ────────────────────
+  // catLine at 20pt (2.5mm) — genuinely readable.
+  // GW at 14pt — readable.
+  // SW and NW share bottom row (different units: carats vs grams) at 10pt.
+  // No stone: catLine 20pt, GW 16pt, NW 12pt — all 3 rows bigger.
+  lines.push(`^FO${RX},0^A0N,20,13^FD${catLine}^FS`);          // y=0→20
   if (sw) {
-    lines.push(`^FO${RX},24^A0N,11,18^FDSW: ${sw}^FS`);        // y=24→35
-    lines.push(`^FO${RX},36^A0N,11,18^FDNW: ${nw}^FS`);        // y=36→47 (last row)
+    lines.push(`^FO${RX},21^A0N,14,13^FDGW: ${gw}^FS`);        // y=21→35
+    const swShort = Number(sw).toFixed(2);
+    const nwShort = Number(nw).toFixed(2);
+    lines.push(`^FO${RX},36^A0N,10,13^FDS:${swShort}  N:${nwShort}^FS`); // y=36→46 ✓
   } else {
-    lines.push(`^FO${RX},24^A0N,11,18^FDNW: ${nw}^FS`);        // y=24→35
+    lines.push(`^FO${RX},21^A0N,16,13^FDGW: ${gw}^FS`);        // y=21→37
+    lines.push(`^FO${RX},38^A0N,10,13^FDNW: ${nw}^FS`);        // y=38→48 (last row)
   }
 
   lines.push('^XZ');

@@ -9,7 +9,7 @@
  *   Top  : physical y=0–54 dead → LH=58 clears it
  *
  * Printable window: logical y=0–46 (physical y=58–104).
- * Layout uses y=6–46 (+6 top margin to pull content down from edge).
+ * Layout uses y=14–46 (+14 top margin — significantly pulled from edge).
  *
  * Bold effect: each key text field printed twice at x and x+1,
  * doubling vertical stroke width (ZPL's cleanest bold technique).
@@ -47,26 +47,26 @@ function generateZPL(item) {
   lines.push('^LS0');
 
   // ── FACE 1: brand (bold) + barcode ──────────────────────────────────────
-  // y=6 start — pulled down from top edge
-  lines.push(`^FO${F1X},6^A0N,14,14^FDMBJ^FS`);
-  lines.push(`^FO${F1X + 1},6^A0N,14,14^FDMBJ^FS`);          // bold
-  // BCN,16,Y → bars 16 + HRT ~8 = 24 total → y=22+24=46 ✓
-  lines.push(`^FO${F1X},22^BY1,3^BCN,16,Y,N,N^FD${bc}^FS`);
+  // y=14 — significantly pulled from top edge
+  lines.push(`^FO${F1X},14^A0N,14,14^FDMBJ^FS`);
+  lines.push(`^FO${F1X + 1},14^A0N,14,14^FDMBJ^FS`);         // bold, y=14→28
+  // BCN,14,N: bars 14 dots, no HRT → y=30+14=44 ✓
+  lines.push(`^FO${F1X},30^BY1,3^BCN,14,N,N,N^FD${bc}^FS`);
 
   // ── FACE 2: category+purity (bold) / weights ─────────────────────────────
   if (sw) {
-    // Stone: 4 rows from y=6 — fits in 40 usable dots
-    lines.push(`^FO${RX},6^A0N,10,10^FD${catLine}^FS`);
-    lines.push(`^FO${RX + 1},6^A0N,10,10^FD${catLine}^FS`);   // bold, y=6 → y=16
-    lines.push(`^FO${RX},18^A0N,10,9^FDGW: ${gw}^FS`);        // y=18 → y=28
-    lines.push(`^FO${RX},30^A0N,10,9^FDSW: ${sw}^FS`);        // y=30 → y=40
-    lines.push(`^FO${RX},40^A0N,8,8^FDNW: ${nw}^FS`);         // y=40 → y=48 (clipped at 46 — last line ok)
+    // Stone: 4 rows from y=14 — tight, fits in 32 usable dots
+    lines.push(`^FO${RX},14^A0N,9,9^FD${catLine}^FS`);
+    lines.push(`^FO${RX + 1},14^A0N,9,9^FD${catLine}^FS`);   // bold, y=14→23
+    lines.push(`^FO${RX},24^A0N,9,8^FDGW: ${gw}^FS`);        // y=24→33
+    lines.push(`^FO${RX},34^A0N,9,8^FDSW: ${sw}^FS`);        // y=34→43
+    lines.push(`^FO${RX},44^A0N,7,7^FDNW: ${nw}^FS`);        // y=44→51 (last row, slight clip ok)
   } else {
-    // No stone: 3 rows from y=6 — bigger fonts, clear spacing
-    lines.push(`^FO${RX},6^A0N,14,13^FD${catLine}^FS`);
-    lines.push(`^FO${RX + 1},6^A0N,14,13^FD${catLine}^FS`);   // bold, y=6 → y=20
-    lines.push(`^FO${RX},22^A0N,13,11^FDGW: ${gw}^FS`);       // y=22 → y=35
-    lines.push(`^FO${RX},36^A0N,12,10^FDNW: ${nw}^FS`);       // y=36 → y=48 (last line ok)
+    // No stone: 3 rows from y=14 — big fonts, clear spacing
+    lines.push(`^FO${RX},14^A0N,15,14^FD${catLine}^FS`);
+    lines.push(`^FO${RX + 1},14^A0N,15,14^FD${catLine}^FS`); // bold, y=14→29
+    lines.push(`^FO${RX},31^A0N,13,11^FDGW: ${gw}^FS`);      // y=31→44
+    lines.push(`^FO${RX},45^A0N,7,6^FDNW: ${nw}^FS`);        // y=45→52 (last row, slight clip ok)
   }
 
   lines.push('^XZ');

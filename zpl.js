@@ -41,24 +41,23 @@ function generateZPL(item) {
   lines.push('^XA');
   lines.push(`^PW${PW}`);
   lines.push(`^LL${LL}`);
-  lines.push('^LH0,58');  // clears top dead zone; logical y max = 46
+  lines.push('^LH0,20');  // TEST: reduced from 58 — if top clips, increase slightly
   lines.push('^LS0');
   lines.push('^MD12');
 
-  // ── FACE 1: MBJ + barcode with HRT (mirrors Shoora layout) ───────────────
-  lines.push(`^FO${F1X},0^A0N,12,12^FDMBJ^FS`);                // brand at top
-  lines.push(`^FO${F1X},13^BY1,3^BCN,28,Y,N,N^FD${bc}^FS`);   // tall barcode + number below
+  // ── FACE 1: MBJ + barcode with HRT ───────────────────────────────────────
+  // LH=20 test: if top is printable, barcode gets full 80 dots of height
+  lines.push(`^FO${F1X},0^A0N,14,14^FDMBJ^FS`);
+  lines.push(`^FO${F1X},16^BY1,3^BCN,50,Y,N,N^FD${bc}^FS`);   // tall barcode
 
-  // ── FACE 2: all 4 fields, proportional sizing (Shoora-matched layout) ────
-  // Max 4 rows in 46 printable dots. catLine bigger, weights equal.
-  // After printer calibration (full 13mm printable) this will be much larger.
-  lines.push(`^FO${RX},0^A0N,14,13^FD${catLine}^FS`);          // y=0→14
-  lines.push(`^FO${RX},15^A0N,10,13^FDGW: ${gw}^FS`);          // y=15→25
+  // ── FACE 2: LH=20 test — 84 usable dots → 4 rows at 20pt each ───────────
+  lines.push(`^FO${RX},0^A0N,20,14^FD${catLine}^FS`);          // y=0→20
+  lines.push(`^FO${RX},22^A0N,18,14^FDGW: ${gw}^FS`);          // y=22→40
   if (sw) {
-    lines.push(`^FO${RX},26^A0N,10,13^FDSW: ${sw}^FS`);        // y=26→36
-    lines.push(`^FO${RX},37^A0N,10,13^FDNW: ${nw}^FS`);        // y=37→47 (last row)
+    lines.push(`^FO${RX},42^A0N,16,13^FDSW: ${sw}^FS`);        // y=42→58
+    lines.push(`^FO${RX},60^A0N,16,13^FDNW: ${nw}^FS`);        // y=60→76
   } else {
-    lines.push(`^FO${RX},26^A0N,10,13^FDNW: ${nw}^FS`);        // y=26→36
+    lines.push(`^FO${RX},42^A0N,18,14^FDNW: ${nw}^FS`);        // y=42→60
   }
 
   lines.push('^XZ');

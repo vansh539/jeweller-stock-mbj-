@@ -4,24 +4,21 @@
  * ZPL II — Zebra GC420t, fold-over jewellery tag LANDSCAPE.
  * Physical: 93mm × 13mm (744 × 104 dots @ 203dpi).
  *
- * Empirical dead zones on this unit:
- *   Left : stored ^LS ≈ +80 dots → all x-coords pre-shifted −80
- *   Top  : physical y=0–54 dead → LH=58 clears it (was LH=40, too low)
+ * Dead zones on this unit:
+ *   Left : stored ^LS ≈ +80 dots → x-coords pre-shifted −80
+ *   Top  : physical y=0–54 dead → LH=58 clears it
  *
- * Printable window: x = F1X–432, y = 0–46  (physical y=58–104)
+ * Printable window: logical y=0–46 (physical y=58–104).
+ * Layout uses y=2–45 (+2 top margin to pull content down a little).
  *
- * Physical positions (stored +80 x-offset baked in):
- *   Face 1 barcode  x=120  (ZPL F1X=40)
- *   Fold crease     x=216  (ZPL=136)
- *   Face 2 text     x=326  (ZPL RX=246)
+ * Bold effect: each key text field printed twice at x and x+1,
+ * doubling vertical stroke width (ZPL's cleanest bold technique).
  */
 function generateZPL(item) {
   const PW  = 744;
-  const LL  = 104;   // actual tag height: 13mm = 104 dots
-  const F1X = 40;    // Face 1 x-start  → physical x ≈ 120
-  const RX  = 246;   // Face 2 text col → physical x ≈ 326
-  // LH=58: dead zone found to end at physical y=54; +4 dot safety margin
-  // Max logical y = 104 − 58 = 46 dots
+  const LL  = 104;
+  const F1X = 40;    // Face 1 x → physical x ≈ 120
+  const RX  = 246;   // Face 2 x → physical x ≈ 326
 
   function barcodePayload(skuStr) {
     const m = skuStr.match(/JS-(\d{8})-(\d+)/);
@@ -46,25 +43,30 @@ function generateZPL(item) {
   lines.push('^XA');
   lines.push(`^PW${PW}`);
   lines.push(`^LL${LL}`);
-  lines.push('^LH0,58');  // shift y-origin past top dead zone
+  lines.push('^LH0,58');  // clears top dead zone; logical y max = 46
   lines.push('^LS0');
 
-  // ── FACE 1: brand + barcode (y=0–44, physical y=58–102) ──────────────────
-  lines.push(`^FO${F1X},0^A0N,10,8^FDMBJ^FS`);           // y=0,  h=10 → y=10
-  lines.push(`^FO${F1X},12^BY1,3^BCN,32,N,N,N^FD${bc}^FS`); // y=12, h=32 → y=44 ✓
+  // ── FACE 1: brand (bold) + barcode with sequence number below ────────────
+  // Bold = print same text at x and x+1 (doubles stroke width)
+  lines.push(`^FO${F1X},2^A0N,12,12^FDMBJ^FS`);
+  lines.push(`^FO${F1X + 1},2^A0N,12,12^FDMBJ^FS`);
+  // BCN,18,Y → bars 18 dots tall + HRT (~8) = 26 total → y=16+26=42 ✓
+  lines.push(`^FO${F1X},16^BY1,3^BCN,18,Y,N,N^FD${bc}^FS`);
 
-  // ── FACE 2: category+purity / weights (y=0–45) ────────────────────────────
+  // ── FACE 2: category+purity (bold) / weights ─────────────────────────────
   if (sw) {
-    // Stone: 4 rows at h=10, spacing=12 — all fit in 46 dots
-    lines.push(`^FO${RX},0^A0N,10,8^FD${catLine}^FS`);    // y=0,  h=10 → y=10
-    lines.push(`^FO${RX},12^A0N,10,8^FDGW: ${gw}^FS`);    // y=12, h=10 → y=22
-    lines.push(`^FO${RX},24^A0N,10,8^FDSW: ${sw}^FS`);    // y=24, h=10 → y=34
-    lines.push(`^FO${RX},35^A0N,10,8^FDNW: ${nw}^FS`);    // y=35, h=10 → y=45 ✓
+    // Stone: 4 rows — tight but fits in 43 logical dots
+    lines.push(`^FO${RX},2^A0N,10,10^FD${catLine}^FS`);
+    lines.push(`^FO${RX + 1},2^A0N,10,10^FD${catLine}^FS`);   // bold
+    lines.push(`^FO${RX},14^A0N,10,9^FDGW: ${gw}^FS`);        // y=14 → y=24
+    lines.push(`^FO${RX},26^A0N,10,9^FDSW: ${sw}^FS`);        // y=26 → y=36
+    lines.push(`^FO${RX},37^A0N,8,7^FDNW: ${nw}^FS`);         // y=37 → y=45 ✓
   } else {
-    // No stone: 3 rows at h=12 — fits comfortably
-    lines.push(`^FO${RX},0^A0N,12,9^FD${catLine}^FS`);    // y=0,  h=12 → y=12
-    lines.push(`^FO${RX},15^A0N,12,9^FDGW: ${gw}^FS`);    // y=15, h=12 → y=27
-    lines.push(`^FO${RX},33^A0N,12,9^FDNW: ${nw}^FS`);    // y=33, h=12 → y=45 ✓
+    // No stone: 3 rows — larger fonts, more breathing room
+    lines.push(`^FO${RX},2^A0N,14,13^FD${catLine}^FS`);
+    lines.push(`^FO${RX + 1},2^A0N,14,13^FD${catLine}^FS`);   // bold
+    lines.push(`^FO${RX},19^A0N,13,11^FDGW: ${gw}^FS`);       // y=19 → y=32
+    lines.push(`^FO${RX},33^A0N,12,10^FDNW: ${nw}^FS`);       // y=33 → y=45 ✓
   }
 
   lines.push('^XZ');

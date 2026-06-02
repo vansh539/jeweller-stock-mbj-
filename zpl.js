@@ -3,19 +3,15 @@
 /**
  * ZPL II — Zebra GC420t, fold-over jewellery tag LANDSCAPE.
  *
- * Dead zones on this unit:
- *   Bottom: physical y=0–54 dead → LH=58 clears it
- *
- * LL=134: printer is calibrated to this. Content capped at y=62 so physical
- * y=58+62=120 matches latest12's approved physical end position exactly.
- * Content starts at y=8 (8-dot top margin = latest12 indentation).
+ * TEST: LH=0, LL=104 — exact Shoora "Layout Swarna" dimensions (13mm).
+ * If MBJ prints without top clipping → no dead zone on this printer,
+ * LH=58 offset was wrong, and full 104-dot window is usable.
  *
  * F1X=20: barcode x=20–178, quiet zone x=198 < fold x=216 ✓
- * Font: ^A0N = CG Triumvirate (Arial equivalent on GC420t)
  */
 function generateZPL(item) {
   const PW  = 744;
-  const LL  = 134;   // printer calibrated to 134 — cap content at y=62 to match latest12 physical position
+  const LL  = 104;   // 13mm — Shoora's exact label height
   const F1X = 20;
   const RX  = 246;
 
@@ -42,26 +38,28 @@ function generateZPL(item) {
   lines.push('^XA');
   lines.push(`^PW${PW}`);
   lines.push(`^LL${LL}`);
-  lines.push('^LH0,58');  // confirmed safe — do not reduce
+  lines.push('^LH0,0');   // TEST — no offset (was 58)
   lines.push('^LS0');
   lines.push('^MD12');
 
-  // ── FACE 1: y=8–62 ──────────────────────────────────────────────────────
-  // Barcode reduced from BCN,27 to BCN,24 to give SKU 12pt (was 9pt = "weirdly small")
-  lines.push(`^FO${F1X},8^A0N,16,14^FDMBJ^FS`);                    // y=8–24   (16pt)
-  lines.push(`^FO${F1X},25^BY2,3^BCN,24,N,N,N^FD${bc}^FS`);        // y=25–49  (24pt barcode)
-  lines.push(`^FO${F1X},50^A0N,12,10^FD${bc}^FS`);                  // y=50–62  (12pt SKU#)
+  // ── FACE 1: Shoora-matched Y positions ───────────────────────────────────
+  // CompanyName Y=2 Font=6, BarcodeImage Y=12 Height=18, BarcodeID Y=35 Font=7
+  lines.push(`^FO${F1X},2^A0N,16,14^FDMBJ^FS`);                    // y=2–18   (16pt)
+  lines.push(`^FO${F1X},20^BY2,3^BCN,18,N,N,N^FD${bc}^FS`);        // y=20–38  (barcode)
+  lines.push(`^FO${F1X},40^A0N,18,14^FD${bc}^FS`);                  // y=40–58  (18pt SKU#)
 
-  // ── FACE 2: y=8–62 ──────────────────────────────────────────────────────
+  // ── FACE 2: Shoora Row Y=2/13/23/33, Font 6-7 ───────────────────────────
   if (sw) {
-    // catLine / GW+SW combined / NW — fits in 54 usable dots
-    lines.push(`^FO${RX},8^A0N,20,13^FD${catLine}^FS`);             // y=8–28   (20pt)
-    lines.push(`^FO${RX},29^A0N,18,9^FDGW:${gw} SW:${sw}^FS`);     // y=29–47  (18pt)
-    lines.push(`^FO${RX},48^A0N,14,13^FDNW:${nw}^FS`);              // y=48–62  (14pt)
+    // 4 rows matching Shoora's exact Y spacing
+    lines.push(`^FO${RX},2^A0N,18,10^FD${catLine}^FS`);             // y=2–20   (Row1 Y=2  Font=7)
+    lines.push(`^FO${RX},22^A0N,16,15^FDGW:${gw}^FS`);              // y=22–38  (Row2 Y=13 Font=6)
+    lines.push(`^FO${RX},40^A0N,16,15^FDSW:${sw}^FS`);              // y=40–56  (Row3 Y=23 Font=6)
+    lines.push(`^FO${RX},58^A0N,16,15^FDNW:${nw}^FS`);              // y=58–74  (Row4 Y=33 Font=6)
   } else {
-    // catLine / GW+NW combined — big text in 54 usable dots
-    lines.push(`^FO${RX},8^A0N,25,13^FD${catLine}^FS`);             // y=8–33   (25pt)
-    lines.push(`^FO${RX},34^A0N,27,10^FDGW:${gw} NW:${nw}^FS`);    // y=34–61  (27pt)
+    // 3 rows — bigger text in full 104-dot window
+    lines.push(`^FO${RX},2^A0N,22,12^FD${catLine}^FS`);             // y=2–24   (22pt)
+    lines.push(`^FO${RX},28^A0N,26,16^FDGW:${gw}^FS`);              // y=28–54  (26pt)
+    lines.push(`^FO${RX},58^A0N,22,16^FDNW:${nw}^FS`);              // y=58–80  (22pt)
   }
 
   lines.push('^XZ');

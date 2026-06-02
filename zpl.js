@@ -2,23 +2,22 @@
 
 /**
  * ZPL II — Zebra GC420t, fold-over jewellery tag LANDSCAPE.
- * Physical: 93mm wide (PW=744), label stock ~20mm tall.
+ * Physical: 93mm wide (PW=744), label stock ~17mm tall.
  *
  * Dead zones on this unit:
- *   Left : stored ^LS ≈ +80 dots → x-coords pre-shifted (^LS0 resets)
  *   Bottom: physical y=0–54 dead → LH=58 starts content above dead zone
+ *   Physical label edge: confirmed ≈ y=134–136 from print tests
  *
- * LL=160 (was 120): extends printable window to use blank space confirmed
- * below content in latest12 photo. Physical y=58–160 = 102 usable dots.
- * If this overprints onto next label, revert LL to 120.
+ * LL=134: logical window y=0–76 (physical y=58–134).
+ *   latest13 confirmed SW at logical y=76 (physical 134) prints ✓
+ *   NW at logical y=82 (physical 140) did NOT print → label ends between them
  *
- * F1X=20: barcode bars end at x=178, quiet zone ends at x=198 < fold x=216 ✓
- * Font: ^A0N = CG Triumvirate (Arial equivalent — clearest on GC420t).
- *   Width set close to 0.6× height for natural, readable proportions.
+ * F1X=20: barcode bars end x=178, quiet zone x=198 < fold x=216 ✓
+ * Font: ^A0N = CG Triumvirate (Arial equivalent on GC420t)
  */
 function generateZPL(item) {
   const PW  = 744;
-  const LL  = 160;   // was 120 — extended to claim blank space below content
+  const LL  = 134;   // physical label boundary confirmed at ~y=134
   const F1X = 20;
   const RX  = 246;
 
@@ -49,27 +48,25 @@ function generateZPL(item) {
   lines.push('^LS0');
   lines.push('^MD12');
 
-  // ── FACE 1: MBJ / barcode / SKU number ─────────────────────────────────
-  // Spaced evenly across 102-dot window (y=8 → y=97)
-  // BY2 = 2-dot bars, BCN h=36 no HRT, SKU printed separately
-  lines.push(`^FO${F1X},8^A0N,22,20^FDMBJ^FS`);                    // y=8–30  (22pt)
-  lines.push(`^FO${F1X},40^BY2,3^BCN,36,N,N,N^FD${bc}^FS`);        // y=40–76 (barcode)
-  lines.push(`^FO${F1X},83^A0N,14,12^FD${bc}^FS`);                  // y=83–97 (SKU num)
+  // ── FACE 1: MBJ / barcode / SKU number — all within y=6–76 ─────────────
+  lines.push(`^FO${F1X},6^A0N,18,16^FDMBJ^FS`);                    // y=6–24   (18pt)
+  lines.push(`^FO${F1X},30^BY2,3^BCN,30,N,N,N^FD${bc}^FS`);        // y=30–60  (barcode)
+  lines.push(`^FO${F1X},62^A0N,10,9^FD${bc}^FS`);                   // y=62–72  (SKU#)
 
-  // ── FACE 2: spaced rows, big text ────────────────────────────────────────
-  // GW/SW/NW formatted "GW: X.XXX" (9 chars × 18w = 162 < 186 ✓)
-  // catLine up to 15 chars × 12w = 180 < 186 ✓
+  // ── FACE 2: all rows within y=6–76 ───────────────────────────────────────
+  // catLine: up to 16 chars × 11w = 176 < 186 ✓
+  // GW/SW/NW: "GW: 3.210" = 9 chars × 16w = 144 ✓
   if (sw) {
-    // 4 rows with ~6-dot gaps: catLine / GW / SW / NW
-    lines.push(`^FO${RX},8^A0N,20,12^FD${catLine}^FS`);             // y=8–28   (20pt)
-    lines.push(`^FO${RX},34^A0N,18,16^FDGW: ${gw}^FS`);             // y=34–52  (18pt)
-    lines.push(`^FO${RX},58^A0N,18,16^FDSW: ${sw}^FS`);             // y=58–76  (18pt)
-    lines.push(`^FO${RX},82^A0N,18,16^FDNW: ${nw}^FS`);             // y=82–100 (18pt)
+    // 4 rows × 15pt with 3-dot gaps — all within y=6–75
+    lines.push(`^FO${RX},6^A0N,15,10^FD${catLine}^FS`);             // y=6–21   (15pt)
+    lines.push(`^FO${RX},24^A0N,15,15^FDGW: ${gw}^FS`);             // y=24–39  (15pt)
+    lines.push(`^FO${RX},42^A0N,15,15^FDSW: ${sw}^FS`);             // y=42–57  (15pt)
+    lines.push(`^FO${RX},60^A0N,15,15^FDNW: ${nw}^FS`);             // y=60–75  (15pt)
   } else {
-    // 3 rows with ~14-dot gaps: catLine / GW / NW
-    lines.push(`^FO${RX},8^A0N,22,12^FD${catLine}^FS`);             // y=8–30   (22pt)
-    lines.push(`^FO${RX},44^A0N,28,18^FDGW: ${gw}^FS`);             // y=44–72  (28pt)
-    lines.push(`^FO${RX},80^A0N,22,18^FDNW: ${nw}^FS`);             // y=80–102 (22pt)
+    // 3 rows, bigger text — catLine 20pt / GW 22pt / NW 18pt within y=6–76
+    lines.push(`^FO${RX},6^A0N,20,11^FD${catLine}^FS`);             // y=6–26   (20pt)
+    lines.push(`^FO${RX},32^A0N,22,16^FDGW: ${gw}^FS`);             // y=32–54  (22pt)
+    lines.push(`^FO${RX},58^A0N,18,16^FDNW: ${nw}^FS`);             // y=58–76  (18pt)
   }
 
   lines.push('^XZ');

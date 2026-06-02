@@ -51,16 +51,16 @@ function generateZPL(item) {
 
   // ── FACE 2: y=2 to y=84 ─────────────────────────────────────────────────
   if (sw) {
-    // 4 rows — 20pt each with spacing, all within y=84
-    lines.push(`^FO${RX},2^A0N,20,10^FD${catLine}^FS`);             // y=2–22   (20pt)
-    lines.push(`^FO${RX},24^A0N,20,15^FDGW:${gw}^FS`);              // y=24–44  (20pt)
-    lines.push(`^FO${RX},46^A0N,20,15^FDSW:${sw}^FS`);              // y=46–66  (20pt)
-    lines.push(`^FO${RX},68^A0N,16,15^FDNW:${nw}^FS`);              // y=68–84  (16pt)
+    // 4 rows — bumped 20→22pt, 16→18pt (positions unchanged)
+    lines.push(`^FO${RX},2^A0N,22,10^FD${catLine}^FS`);             // y=2–24   (22pt)
+    lines.push(`^FO${RX},24^A0N,22,15^FDGW:${gw}^FS`);              // y=24–46  (22pt)
+    lines.push(`^FO${RX},46^A0N,22,15^FDSW:${sw}^FS`);              // y=46–68  (22pt)
+    lines.push(`^FO${RX},68^A0N,18,15^FDNW:${nw}^FS`);              // y=68–86  (18pt)
   } else {
-    // 3 rows — biggest text we've ever had
-    lines.push(`^FO${RX},2^A0N,28,12^FD${catLine}^FS`);             // y=2–30   (28pt)
-    lines.push(`^FO${RX},34^A0N,28,16^FDGW:${gw}^FS`);              // y=34–62  (28pt)
-    lines.push(`^FO${RX},66^A0N,18,16^FDNW:${nw}^FS`);              // y=66–84  (18pt)
+    // 3 rows — bumped 28→32pt, 18→20pt (positions unchanged)
+    lines.push(`^FO${RX},2^A0N,32,12^FD${catLine}^FS`);             // y=2–34   (32pt)
+    lines.push(`^FO${RX},34^A0N,32,16^FDGW:${gw}^FS`);              // y=34–66  (32pt)
+    lines.push(`^FO${RX},66^A0N,20,16^FDNW:${nw}^FS`);              // y=66–86  (20pt)
   }
 
   lines.push('^XZ');

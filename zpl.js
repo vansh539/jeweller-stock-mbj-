@@ -2,22 +2,20 @@
 
 /**
  * ZPL II — Zebra GC420t, fold-over jewellery tag LANDSCAPE.
- * Physical: 93mm wide (PW=744), label stock ~17mm tall.
+ * Physical label edge confirmed at ~y=134 (physical y=58+76) from print tests.
  *
  * Dead zones on this unit:
- *   Bottom: physical y=0–54 dead → LH=58 starts content above dead zone
- *   Physical label edge: confirmed ≈ y=134–136 from print tests
+ *   Bottom dead zone: physical y=0–54 (LH=58 clears it)
+ *   Physical label edge: confirmed y=134 → logical window y=0–76
  *
- * LL=134: logical window y=0–76 (physical y=58–134).
- *   latest13 confirmed SW at logical y=76 (physical 134) prints ✓
- *   NW at logical y=82 (physical 140) did NOT print → label ends between them
+ * Layout: approved font sizes from latest13 shifted to start at y=2,
+ * packing everything within y=76 so NW and SKU are no longer cut off.
  *
- * F1X=20: barcode bars end x=178, quiet zone x=198 < fold x=216 ✓
- * Font: ^A0N = CG Triumvirate (Arial equivalent on GC420t)
+ * F1X=20: barcode bars x=20–178, quiet zone x=198 < fold x=216 ✓
  */
 function generateZPL(item) {
   const PW  = 744;
-  const LL  = 134;   // physical label boundary confirmed at ~y=134
+  const LL  = 134;
   const F1X = 20;
   const RX  = 246;
 
@@ -48,25 +46,26 @@ function generateZPL(item) {
   lines.push('^LS0');
   lines.push('^MD12');
 
-  // ── FACE 1: MBJ / barcode / SKU number — all within y=6–76 ─────────────
-  lines.push(`^FO${F1X},6^A0N,18,16^FDMBJ^FS`);                    // y=6–24   (18pt)
-  lines.push(`^FO${F1X},30^BY2,3^BCN,30,N,N,N^FD${bc}^FS`);        // y=30–60  (barcode)
-  lines.push(`^FO${F1X},62^A0N,10,9^FD${bc}^FS`);                   // y=62–72  (SKU#)
+  // ── FACE 1: y=2–76 ──────────────────────────────────────────────────────
+  // Same sizes as latest13, shifted up from y=8 → y=2 so SKU fits within y=76
+  lines.push(`^FO${F1X},2^A0N,22,20^FDMBJ^FS`);                    // y=2–24   (22pt)
+  lines.push(`^FO${F1X},26^BY2,3^BCN,36,N,N,N^FD${bc}^FS`);        // y=26–62  (36pt barcode)
+  lines.push(`^FO${F1X},64^A0N,12,10^FD${bc}^FS`);                  // y=64–76  (12pt SKU#)
 
-  // ── FACE 2: all rows within y=6–76 ───────────────────────────────────────
-  // catLine: up to 16 chars × 11w = 176 < 186 ✓
-  // GW/SW/NW: "GW: 3.210" = 9 chars × 16w = 144 ✓
+  // ── FACE 2: y=2–76 ──────────────────────────────────────────────────────
+  // catLine: up to 15 chars × 12w = 180 < 186 ✓ (no-stone) / 15ch × 10 = 150 ✓ (stone)
+  // GW/SW/NW: "GW: X.XXX" = 9 chars × 18w = 162 < 186 ✓ / 9 × 16 = 144 ✓
   if (sw) {
-    // 4 rows × 15pt with 3-dot gaps — all within y=6–75
-    lines.push(`^FO${RX},6^A0N,15,10^FD${catLine}^FS`);             // y=6–21   (15pt)
-    lines.push(`^FO${RX},24^A0N,15,15^FDGW: ${gw}^FS`);             // y=24–39  (15pt)
-    lines.push(`^FO${RX},42^A0N,15,15^FDSW: ${sw}^FS`);             // y=42–57  (15pt)
-    lines.push(`^FO${RX},60^A0N,15,15^FDNW: ${nw}^FS`);             // y=60–75  (15pt)
-  } else {
-    // 3 rows, bigger text — catLine 20pt / GW 22pt / NW 18pt within y=6–76
-    lines.push(`^FO${RX},6^A0N,20,11^FD${catLine}^FS`);             // y=6–26   (20pt)
-    lines.push(`^FO${RX},32^A0N,22,16^FDGW: ${gw}^FS`);             // y=32–54  (22pt)
+    // 4 rows tight-packed (0 gap) to hit approved sizes in y=2–76
+    lines.push(`^FO${RX},2^A0N,20,10^FD${catLine}^FS`);             // y=2–22   (20pt)
+    lines.push(`^FO${RX},22^A0N,18,16^FDGW: ${gw}^FS`);             // y=22–40  (18pt)
+    lines.push(`^FO${RX},40^A0N,18,16^FDSW: ${sw}^FS`);             // y=40–58  (18pt)
     lines.push(`^FO${RX},58^A0N,18,16^FDNW: ${nw}^FS`);             // y=58–76  (18pt)
+  } else {
+    // 3 rows with 2-dot gaps — approved sizes from latest13
+    lines.push(`^FO${RX},2^A0N,22,12^FD${catLine}^FS`);             // y=2–24   (22pt)
+    lines.push(`^FO${RX},26^A0N,28,18^FDGW: ${gw}^FS`);             // y=26–54  (28pt)
+    lines.push(`^FO${RX},56^A0N,20,18^FDNW: ${nw}^FS`);             // y=56–76  (20pt)
   }
 
   lines.push('^XZ');

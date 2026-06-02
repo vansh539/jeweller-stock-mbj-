@@ -3,7 +3,7 @@
 /**
  * ZPL II — Zebra GC420t, fold-over jewellery tag LANDSCAPE.
  *
- * LH=20: small top dead zone confirmed (~2.5mm).
+ * LH=28: 3.5mm top dead zone — clears clip, pushes content slightly lower.
  * LL=104: 13mm label (Shoora-matched).
  * Logical window: y=0 to y=84 (104-20 = 84 dots = 10.5mm usable).
  *
@@ -40,7 +40,7 @@ function generateZPL(item) {
   lines.push('^XA');
   lines.push(`^PW${PW}`);
   lines.push(`^LL${LL}`);
-  lines.push('^LH0,20');  // 20-dot top dead zone (2.5mm)
+  lines.push('^LH0,28');  // 28-dot top dead zone (3.5mm) — clears clip, pushes content down
   lines.push('^LS0');
   lines.push('^MD12');
 

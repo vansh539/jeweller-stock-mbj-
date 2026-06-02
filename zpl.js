@@ -6,15 +6,16 @@
  * Dead zones on this unit:
  *   Bottom: physical y=0–54 dead → LH=58 clears it
  *
- * LL=120: restores latest12 vertical positioning (approved).
- * Logical window y=0–62. Content starts at y=8 (8-dot top margin).
+ * LL=134: printer is calibrated to this. Content capped at y=62 so physical
+ * y=58+62=120 matches latest12's approved physical end position exactly.
+ * Content starts at y=8 (8-dot top margin = latest12 indentation).
  *
  * F1X=20: barcode x=20–178, quiet zone x=198 < fold x=216 ✓
  * Font: ^A0N = CG Triumvirate (Arial equivalent on GC420t)
  */
 function generateZPL(item) {
   const PW  = 744;
-  const LL  = 120;   // restored — matches latest12 vertical positioning
+  const LL  = 134;   // printer calibrated to 134 — cap content at y=62 to match latest12 physical position
   const F1X = 20;
   const RX  = 246;
 

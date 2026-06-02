@@ -3,19 +3,23 @@
 /**
  * ZPL II — Zebra GC420t, fold-over jewellery tag LANDSCAPE.
  * Physical: 93mm × 15mm (744 × 120 dots @ 203dpi).
- *   Swarna reference confirms Height=15mm → LL=120, not 104.
  *
  * Dead zones on this unit:
  *   Left : stored ^LS ≈ +80 dots → x-coords pre-shifted −80
  *   Top  : physical y=0–54 dead → LH=58 clears it
  *
  * Printable window: logical y=0–62 (physical y=58–120) = 7.7mm.
- * Previous LL=104 was wrong — lost 2mm (16 dots) of printable area.
- * ^MD12: darker print. No bold.
+ * DO NOT change PW/LL/LH/LS — both faces print correctly at these values.
+ *
+ * Shoora 'Layout Swarna' ref: Arial Bold, Font 6-7, ~11-dot row spacing.
+ * We match that proportion within our 62-dot window.
+ *
+ * Face 1 — MBJ + barcode (BY2=thicker bars, HRT as separate field to avoid clipping)
+ * Face 2 — 4 equal rows (stone) or 3 larger rows (no stone)
  */
 function generateZPL(item) {
   const PW  = 744;
-  const LL  = 120;   // 15mm — confirmed by Swarna reference (was 104 = wrong)
+  const LL  = 120;   // 15mm — confirmed. Do not change.
   const F1X = 40;    // Face 1 x → physical x ≈ 120
   const RX  = 246;   // Face 2 x → physical x ≈ 326
 
@@ -47,18 +51,25 @@ function generateZPL(item) {
   lines.push('^MD12');
 
   // ── FACE 1: MBJ + barcode ────────────────────────────────────────────────
-  lines.push(`^FO${F1X},4^A0N,12,12^FDMBJ^FS`);
-  lines.push(`^FO${F1X},18^BY1,3^BCN,40,Y,N,N^FD${bc}^FS`);   // bars y=18→58, HRT→62 ✓
+  // BY2 = 2-dot narrow bars (was 1) → thicker, more scannable
+  // BCN h=34, HRT=N — avoids barcode-number overflow past y=62
+  // Barcode number printed separately at y=51 with controlled font size
+  lines.push(`^FO${F1X},2^A0N,13,11^FDMBJ^FS`);                   // y=2–15
+  lines.push(`^FO${F1X},16^BY2,3^BCN,34,N,N,N^FD${bc}^FS`);       // bars y=16–50
+  lines.push(`^FO${F1X},51^A0N,11,9^FD${bc}^FS`);                  // barcode num y=51–62
 
-  // ── FACE 2: maximised fonts in 62-dot window, y=4 start ──────────────────
-  // Rows packed tight (no gaps) to maximise height: 22+17+14+9 = 62-4 = 58
-  lines.push(`^FO${RX},4^A0N,22,13^FD${catLine}^FS`);          // y=4→26  (22pt)
-  lines.push(`^FO${RX},26^A0N,17,13^FDGW: ${gw}^FS`);          // y=26→43 (17pt)
+  // ── FACE 2: rows proportioned to Shoora ~11-dot spacing ──────────────────
   if (sw) {
-    lines.push(`^FO${RX},43^A0N,14,13^FDSW: ${sw}^FS`);        // y=43→57 (14pt)
-    lines.push(`^FO${RX},57^A0N,5,12^FDNW: ${nw}^FS`);         // y=57→62 (last row)
+    // 4 rows × 14pt packed into 60-dot window (y=2 to y=62)
+    lines.push(`^FO${RX},2^A0N,15,11^FD${catLine}^FS`);            // y=2–17
+    lines.push(`^FO${RX},18^A0N,14,10^FDGW:${gw}^FS`);             // y=18–32
+    lines.push(`^FO${RX},33^A0N,14,10^FDSW:${sw}^FS`);             // y=33–47
+    lines.push(`^FO${RX},48^A0N,14,10^FDNW:${nw}^FS`);             // y=48–62
   } else {
-    lines.push(`^FO${RX},43^A0N,19,13^FDNW: ${nw}^FS`);        // y=43→62 (no stone: bigger NW)
+    // 3 rows — bigger text since no stone row needed
+    lines.push(`^FO${RX},2^A0N,19,13^FD${catLine}^FS`);            // y=2–21
+    lines.push(`^FO${RX},22^A0N,19,13^FDGW:${gw}^FS`);             // y=22–41
+    lines.push(`^FO${RX},42^A0N,20,13^FDNW:${nw}^FS`);             // y=42–62
   }
 
   lines.push('^XZ');

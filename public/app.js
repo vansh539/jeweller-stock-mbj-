@@ -175,12 +175,13 @@ function persistNewDropdownValues(formValues) {
 
 function getRateForPurity(metal, purity) {
   if (!liveRates) return null;
-  const m = (metal || '').toLowerCase();
-  if (m !== 'gold' && m !== 'rose gold') return null;
-  if (purity === '24K') return liveRates.g24k;
-  if (purity === '22K') return liveRates.g22k;
-  if (purity === '18K') return liveRates.g18k;
-  const k = parseInt(purity);
+  const m = (metal || '').toLowerCase().trim();
+  if (m === 'silver') return liveRates.silver || null;
+  const p = (purity || '').toUpperCase().trim();
+  if (p === '24K') return liveRates.g24k;
+  if (p === '22K') return liveRates.g22k;
+  if (p === '18K') return liveRates.g18k;
+  const k = parseFloat(p);
   if (k && liveRates.g24k) return Math.round((k / 24) * liveRates.g24k);
   return null;
 }
@@ -192,7 +193,7 @@ function recalcAll(prefix) {
   // ── 1. Net weight (gross g − stone ct × 0.2 g/ct) ──
   const gross    = parseFloat($(`${prefix}-gross`)?.value) || 0;
   const stones   = getStonesFromForm(prefix);
-  const stoneWtG = stones.reduce((s, st) => s + (st.pieces || 1) * (st.weight || 0) * 0.2, 0);
+  const stoneWtG = stones.reduce((s, st) => s + (st.weight || 0) * 0.2, 0);
   const netWt    = gross > 0 ? Math.max(0, gross - stoneWtG) : 0;
   const netEl    = $(`${prefix}-net`);
   if (netEl && gross > 0) netEl.value = netWt.toFixed(2);
@@ -235,7 +236,7 @@ function addStoneRow(prefix, data = {}) {
            placeholder="Stone type" autocomplete="off" value="${esc(data.type || '')}">
     <input type="number" class="stone-pieces"  placeholder="Pcs" min="1" step="1"
            value="${data.pieces != null ? data.pieces : 1}">
-    <input type="number" class="stone-weight"  placeholder="Wt/pc" min="0" step="0.001"
+    <input type="number" class="stone-weight"  placeholder="Total Wt" min="0" step="0.001"
            value="${data.weight != null ? data.weight : ''}">
     <select class="stone-unit">
       <option value="ct">ct</option>
@@ -254,7 +255,7 @@ function addStoneRow(prefix, data = {}) {
     const unit  = row.querySelector('.stone-unit').value;
     const wt_ct = unit === 'g' ? wt / 0.2 : wt;
     const ppc   = parseFloat(row.querySelector('.stone-ppc').value)    || 0;
-    const tot   = pcs * wt_ct * ppc;
+    const tot   = wt_ct * ppc;
     row.querySelector('.stone-value').textContent = tot > 0
       ? '₹' + tot.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
       : '—';
@@ -693,33 +694,113 @@ async function openPrintModal(sku) {
   if (itemRes.ok) {
     const it = itemRes.data.item;
 
-    const gw = it.gross_weight != null ? Number(it.gross_weight).toFixed(3) : '—';
-    const nw = Number(it.net_weight || 0).toFixed(3);
-    const purity   = (it.purity || '').toString().replace(/[^0-9]/g, '');
-    const catLine  = purity ? `${it.category || ''}  ${purity}` : (it.category || '');
-    const itemName = (it.item_name || it.name || '').slice(0, 16);
+    const gw       = it.gross_weight != null ? Number(it.gross_weight).toFixed(3) : '—';
+    const nw       = Number(it.net_weight || 0).toFixed(3);
+    const purity   = (it.purity  || '').toString().replace(/[^0-9]/g, '');
+    const metal    = (it.metal   || '').toString().trim();
+    const category = (it.category|| '').toString().trim().substring(0, 11).toUpperCase();
+    const metalLine = [metal, purity ? `${purity}K` : ''].filter(Boolean).join('  ') || purity;
 
-    // Face 1: item name, barcode (rendered below), SKU
-    $('lm-company').textContent = itemName;
-    $('lm-sku').textContent     = sku;
-
-    // Face 2: category+purity, then GW / SW / NW
-    $('lm-name').textContent = catLine;
-    $('lm-gw').textContent   = `GW:${gw}`;
-
-    const hasStone = !!(it.stone_type && it.stone_type !== 'None');
-    if (hasStone) {
-      const sw = it.stone_weight != null ? Number(it.stone_weight).toFixed(3) : '';
-      $('lm-sw').textContent = sw ? `SW:${sw}` : '';
-      $('lm-nw').textContent = `NW:${nw}`;
-      $('lm-nw').style.top   = '41px';   /* ZPL y=51 × 0.801 */
-    } else {
-      $('lm-sw').textContent = '';
-      $('lm-nw').textContent = `NW:${nw}`;
-      $('lm-nw').style.top   = '35px';   /* ZPL y=44 × 0.801 */
+    // Build stone list
+    let stones = [];
+    try {
+      const sj = it.stones_json;
+      if (sj && sj !== '[]' && sj !== 'null') {
+        const parsed = JSON.parse(sj);
+        if (Array.isArray(parsed) && parsed.length > 0) stones = parsed;
+      }
+    } catch (e) {}
+    if (stones.length === 0 && it.stone_type && it.stone_type !== 'None' && it.stone_type.trim()) {
+      stones = [{ type: it.stone_type, pieces: null, weight: Number(it.stone_weight || 0) }];
     }
-    $('lm-date').textContent = '';
-    $('lm-cat').textContent  = '';
+
+    // Total SW for F1
+    let swDisplay = null;
+    if (stones.length > 0) {
+      if (it.stone_weight != null) {
+        swDisplay = Number(it.stone_weight).toFixed(3);
+      } else {
+        const totalCt = stones.reduce((sum, s) =>
+          sum + (s.pieces != null ? Number(s.pieces) * Number(s.weight || 0) : Number(s.weight || 0)), 0);
+        swDisplay = totalCt.toFixed(3);
+      }
+    }
+
+    // Retrieve barcode payload (mirrors zpl.js logic)
+    function bcPayload(skuStr) {
+      const m = skuStr.match(/JS-(\d{8})-(\d+)/);
+      if (m) return m[2].padStart(4, '0');
+      return skuStr.replace(/[^0-9]/g, '').padStart(4, '0').slice(-4);
+    }
+    const bc = bcPayload(sku);
+
+    // ── Face 1 ──────────────────────────────────────────────────────────────
+    $('lm-company').textContent = `MBJ  ${category}`;
+    $('lm-name').textContent    = metalLine;
+    $('lm-f1sw').textContent    = swDisplay ? `SW:${swDisplay}` : '';
+    $('lm-f1no').textContent    = bc;   // vertical tag number beside barcode
+    $('lm-cat').textContent     = '';
+
+    // Adjust font sizes & positions (mirrors ZPL layout)
+    if (swDisplay) {
+      // Stone: 16pt MBJ, 12pt rest; NW pinned at bottom (ZPL y=62→CSS 50px)
+      $('lm-company').style.cssText += '; font-size:13px; top:2px';
+      $('lm-name').style.cssText    += '; font-size:10px; top:16px';
+      $('lm-sku').style.cssText     += '; font-size:10px; top:27px';
+      $('lm-f1sw').style.cssText    += '; font-size:10px; top:38px';
+    } else {
+      // No-stone: 18pt MBJ, 14pt rest; NW pinned at bottom with air gap above
+      $('lm-company').style.cssText += '; font-size:14px; top:2px';
+      $('lm-name').style.cssText    += '; font-size:11px; top:18px';
+      $('lm-sku').style.cssText     += '; font-size:11px; top:30px';
+    }
+    $('lm-sku').textContent = `GW:${gw}`;
+
+    const nwEl = $('lm-f1nw');
+    if (nwEl) {
+      nwEl.textContent    = `NW:${nw}`;
+      nwEl.style.top      = '50px';   // pinned at bottom for both cases
+      nwEl.style.fontSize = swDisplay ? '10px' : '11px';
+    }
+
+    // ── Face 2 — stone rows ─────────────────────────────────────────────────
+    const stoneElIds = ['lm-gw', 'lm-sw', 'lm-nw', 'lm-date', 'lm-stone5'];
+    // Adaptive font & top positions matching ZPL layouts
+    const stoneTops = [
+      [3],           // 1 stone: top=3
+      [3, 21],       // 2 stones
+      [3, 18, 33],   // 3 stones
+      [3, 16, 29, 42], // 4 stones
+      [3, 14, 25, 36, 47], // 5 stones
+    ];
+    const stoneFonts = ['14px', '12px', '11px', '10px', '9px'];
+    const count = Math.min(stones.length, 5);
+    const tops  = stoneTops[count - 1] || [];
+    const fsize = stoneFonts[count - 1] || '9px';
+
+    stoneElIds.forEach((id, i) => {
+      const el = $(id);
+      if (!el) return;
+      const s = stones[i];
+      if (s) {
+        const abbr = (s.type || 'STN').substring(0, 4).toUpperCase();
+        let row;
+        if (s.pieces != null) {
+          const totalCt = (Number(s.pieces) * Number(s.weight || 0)).toFixed(2);
+          row = `${abbr}   ${s.pieces}/  ${totalCt}ct`;
+        } else {
+          const wt = Number(s.weight || 0);
+          row = wt > 0 ? `${abbr}   ${wt.toFixed(2)}ct` : abbr;
+        }
+        el.textContent    = row;
+        el.style.top      = `${tops[i]}px`;
+        el.style.fontSize = fsize;
+        el.style.display  = '';
+      } else {
+        el.textContent = '';
+        el.style.display = 'none';
+      }
+    });
   }
 
   // Render barcode via JsBarcode — use compact 12-digit numeric payload (matches ZPL print)
@@ -948,7 +1029,7 @@ function calcInvoice() {
   const wPct    = Number($('inv-wastage').value) || 0;
   const making  = Number($('inv-making').value)  || 0;
   const stones  = getStonesFromForm('inv');
-  const stone   = stones.reduce((s, st) => s + (st.pieces || 1) * (st.weight || 0) * (st.price_per_ct || 0), 0);
+  const stone   = stones.reduce((s, st) => s + (st.weight || 0) * (st.price_per_ct || 0), 0);
 
   const gold     = rate * weight;
   const wastage  = (wPct / 100) * gold;
@@ -988,7 +1069,8 @@ async function openInvoiceModal(sku) {
   const item = data.item;
   $('invoice-sku-title').textContent = sku;
   $('inv-sku').value          = sku;
-  $('inv-rate').value         = '';
+  const autoRate = getRateForPurity(item.metal, item.purity);
+  $('inv-rate').value         = autoRate || '';
   $('inv-weight').value       = item.net_weight  != null ? item.net_weight  : '';
   $('inv-wastage').value      = item.wastage_pct != null ? item.wastage_pct : '';
   $('inv-making-rate').value  = '';
@@ -1003,6 +1085,7 @@ async function openInvoiceModal(sku) {
 
   showError('invoice-error', '');
   calcInvoice();
+  fetchGoldRates(); // refresh rates when invoice opens
 
   invoiceModal.hidden = false;
   document.body.style.overflow = 'hidden';
@@ -1072,15 +1155,16 @@ async function fetchGoldRates() {
     $('gr-24k').textContent = f(data.g24k) + '/g';
     $('gr-22k').textContent = f(data.g22k) + '/g';
     $('gr-18k').textContent = f(data.g18k) + '/g';
-    liveRates = { g24k: data.g24k, g22k: data.g22k, g18k: data.g18k };
+    if ($('gr-silver')) $('gr-silver').textContent = data.silver ? f(data.silver) + '/g' : '—';
+    liveRates = { g24k: data.g24k, g22k: data.g22k, g18k: data.g18k, silver: data.silver };
     recalcAll('f');
     recalcAll('e');
 
     if (meta) {
-      const label = data.stale ? '⚠ Stale — ' : (data.cached ? '' : 'Live · ');
+      const src = data.source_label || 'GoodReturns Hyderabad';
       meta.textContent = data.stale
-        ? `⚠ Stale — IBJA (incl. 3% GST) · As of ${data.asOf}`
-        : `${label}IBJA (incl. 3% GST) · As of ${data.asOf}`;
+        ? `⚠ Stale — ${src} · As of ${data.asOf}`
+        : `${data.cached ? '' : 'Live · '}${src} · As of ${data.asOf}`;
     }
   } catch (err) {
     if (meta) meta.textContent = 'Rates unavailable';

@@ -455,48 +455,97 @@ app.get('/api/stats', (req, res) => {
   }
 });
 
-// ─── Gold rates (IBJA) ───────────────────────────────────────────────────────
+// ─── Metal rates (IBJA gold + silver best-effort) ────────────────────────────
 
-let _goldCache = null; // { date, g24k, g22k, g18k, asOf }
+let _rateCache = null; // { fetchedAt, g24k, g22k, g18k, silver, asOf }
+
+const _UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
+async function fetchGoldFromIBJA() {
+  const res = await fetch('https://ibjarates.com/', {
+    headers: { 'User-Agent': _UA, 'Accept': 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8', 'Accept-Language': 'en-IN,en;q=0.9' },
+  });
+  if (!res.ok) throw new Error(`IBJA HTTP ${res.status}`);
+  const html = await res.text();
+
+  const goldMatch = html.match(/id="HdnGold"\s+value="([^"]+)"/);
+  if (!goldMatch) throw new Error('Gold data field not found in IBJA page');
+  const data = JSON.parse(goldMatch[1].replace(/&quot;/g, '"'));
+  const last = data.purity999.length - 1;
+  const raw24k = Math.round(data.purity999[last] / 10);
+  const raw22k = Math.round(data.purity916[last] / 10);
+  const g24k = Math.round(raw24k * 1.03);
+  const g22k = Math.round(raw22k * 1.03);
+  const g18k = Math.round(raw24k * 0.75 * 1.03);
+  const asOf = data.labels[last];
+
+  // Extract silver from same IBJA page — silverRate is ₹/kg, convert to ₹/gram + 3% GST
+  let silver = null;
+  try {
+    const silverMatch = html.match(/id="HdnSilver"\s+value="([^"]+)"/);
+    if (silverMatch) {
+      const sData = JSON.parse(silverMatch[1].replace(/&quot;/g, '"'));
+      const sLast = sData.silverRate.length - 1;
+      const perGram = sData.silverRate[sLast] / 1000;   // ₹/kg → ₹/gram
+      silver = Math.round(perGram * 1.03);               // add 3% GST
+    }
+  } catch (e) { /* silver optional */ }
+
+  return { g24k, g22k, g18k, asOf, silver };
+}
+
+async function fetchSilverRate() {
+  // Try multiple public sources for silver per gram (India)
+  const tryUrls = [
+    { url: 'https://ibjarates.com/', pat: /id="HdnSilver"\s+value="([^"]+)"/ },
+    { url: 'https://www.bullionrates.in/silver-rate-hyderabad/', pat: /1\s*Gram[^₹\d]{0,200}₹\s*([\d,]+)/ },
+  ];
+  for (const { url, pat } of tryUrls) {
+    try {
+      const r = await fetch(url, { headers: { 'User-Agent': _UA, 'Accept': 'text/html', 'Accept-Language': 'en-IN,en;q=0.9' } });
+      if (!r.ok) continue;
+      const html = await r.text();
+      const m = html.match(pat);
+      if (!m) continue;
+      // IBJA uses embedded JSON for silver, others use raw ₹ value
+      if (url.includes('ibjarates')) {
+        try {
+          const data = JSON.parse(m[1].replace(/&quot;/g, '"'));
+          const last = data.purity999.length - 1;
+          const silver = Math.round((data.purity999[last] / 1000) * 1.03); // paise → per gram + GST
+          if (silver > 50 && silver < 500) return silver;
+        } catch (e) { continue; }
+      } else {
+        const n = parseInt(m[1].replace(/,/g, ''), 10);
+        if (n > 50 && n < 500) return n;
+      }
+    } catch (e) { /* try next */ }
+  }
+  return null;
+}
 
 app.get('/api/gold-rates', async (req, res) => {
   try {
-    const today = new Date().toISOString().slice(0, 10);
-
-    if (_goldCache && _goldCache.date === today) {
-      return res.json({ success: true, cached: true, ..._goldCache });
+    const CACHE_TTL = 5 * 60 * 1000; // 5 minutes — fresh on every page refresh
+    if (_rateCache && Date.now() - _rateCache.fetchedAt < CACHE_TTL) {
+      return res.json({ success: true, cached: true, ..._rateCache });
     }
 
-    const response = await fetch('https://ibjarates.com/', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Accept':          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-IN,en;q=0.9',
-      },
-    });
-    if (!response.ok) throw new Error(`IBJA returned HTTP ${response.status}`);
-
-    const html = await response.text();
-    const match = html.match(/id="HdnGold"\s+value="([^"]+)"/);
-    if (!match) throw new Error('Gold data field not found in IBJA page');
-
-    const jsonStr = match[1].replace(/&quot;/g, '"');
-    const data    = JSON.parse(jsonStr);
-    const last    = data.purity999.length - 1;
-
-    const raw24k = Math.round(data.purity999[last] / 10);
-    const raw22k = Math.round(data.purity916[last] / 10);
-    const g24k = Math.round(raw24k * 1.03);
-    const g22k = Math.round(raw22k * 1.03);
-    const g18k = Math.round(raw24k * 0.75 * 1.03);
-    const asOf = data.labels[last]; // DD/MM/YYYY
-
-    _goldCache = { date: today, g24k, g22k, g18k, asOf, source: 'IBJA', source_label: 'IBJA (incl. 3% GST)' };
-    res.json({ success: true, cached: false, ..._goldCache });
+    const goldData = await fetchGoldFromIBJA();
+    // fetchSilverRate as fallback if IBJA didn't have silver
+    const silver = goldData.silver != null ? goldData.silver : await fetchSilverRate();
+    _rateCache = {
+      fetchedAt: Date.now(),
+      ...goldData,
+      silver,
+      source: 'IBJA',
+      source_label: 'IBJA (incl. 3% GST)',
+    };
+    res.json({ success: true, cached: false, ..._rateCache });
   } catch (err) {
     console.error('[GET /api/gold-rates]', err.message);
-    if (_goldCache) return res.json({ success: true, cached: true, stale: true, ..._goldCache });
-    res.status(503).json({ success: false, error: 'Could not fetch gold rates. ' + err.message });
+    if (_rateCache) return res.json({ success: true, cached: true, stale: true, ..._rateCache });
+    res.status(503).json({ success: false, error: 'Could not fetch rates. ' + err.message });
   }
 });
 

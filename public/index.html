@@ -29,7 +29,7 @@
 
   <!-- ══════════════════════════════════════════════════════ GOLD RATES STRIP -->
   <div class="gold-strip" id="gold-strip">
-    <span class="gold-strip-label">Today's Gold Rates — per gram (incl. 3% GST)</span>
+    <span class="gold-strip-label">Live Rates — per gram (IBJA · incl. 3% GST)</span>
     <div class="gold-rates">
       <div class="gold-rate-pill">
         <span class="gr-karat">24K</span>
@@ -42,6 +42,10 @@
       <div class="gold-rate-pill">
         <span class="gr-karat">18K</span>
         <span class="gr-price" id="gr-18k">—</span>
+      </div>
+      <div class="gold-rate-pill">
+        <span class="gr-karat">Silver</span>
+        <span class="gr-price" id="gr-silver">—</span>
       </div>
     </div>
     <span class="gold-strip-meta" id="gold-strip-meta">Fetching…</span>
@@ -206,7 +210,7 @@
             </div>
             <div id="f-stones-container" class="stones-container">
               <div class="stone-col-headers">
-                <span>Type</span><span>Pcs</span><span>Wt/pc</span><span>Unit</span><span>₹ / ct</span><span>Total</span><span></span>
+                <span>Type</span><span>Pcs</span><span>Total Wt</span><span>Unit</span><span>₹ / ct</span><span>Total</span><span></span>
               </div>
               <div class="stones-empty" id="f-stones-empty">No stones — click "+ Add Stone" to add</div>
             </div>
@@ -387,7 +391,7 @@
             </div>
             <div id="e-stones-container" class="stones-container">
               <div class="stone-col-headers">
-                <span>Type</span><span>Pcs</span><span>Wt/pc</span><span>Unit</span><span>₹ / ct</span><span>Total</span><span></span>
+                <span>Type</span><span>Pcs</span><span>Total Wt</span><span>Unit</span><span>₹ / ct</span><span>Total</span><span></span>
               </div>
               <div class="stones-empty" id="e-stones-empty">No stones — click "+ Add Stone" to add</div>
             </div>
@@ -461,16 +465,20 @@
           <div class="label-mockup" id="label-mockup">
             <div class="lm-box">
               <div class="lm-fold"></div>
-              <!-- Face 1: item name, barcode, SKU -->
+              <!-- Face 1: left text column + right barcode -->
               <div class="lm-company" id="lm-company"></div>
+              <div class="lm-name"    id="lm-name"></div>
+              <div class="lm-sku"     id="lm-sku"></div>
+              <div class="lm-f1sw"    id="lm-f1sw"></div>
+              <div class="lm-f1nw"    id="lm-f1nw"></div>
+              <div class="lm-f1no"    id="lm-f1no"></div>
               <div class="lm-barcode"><svg id="barcode-svg"></svg></div>
-              <div class="lm-sku" id="lm-sku"></div>
-              <!-- Face 2: category+purity, GW, SW, NW -->
-              <div class="lm-name" id="lm-name"></div>
-              <div class="lm-gw" id="lm-gw"></div>
-              <div class="lm-sw" id="lm-sw"></div>
-              <div class="lm-nw" id="lm-nw"></div>
-              <div class="lm-date" id="lm-date"></div>
+              <!-- Face 2: stone rows -->
+              <div class="lm-gw"     id="lm-gw"></div>
+              <div class="lm-sw"     id="lm-sw"></div>
+              <div class="lm-nw"     id="lm-nw"></div>
+              <div class="lm-date"   id="lm-date"></div>
+              <div class="lm-stone5" id="lm-stone5"></div>
             </div>
             <div class="lm-neck">
               <div class="lm-cat" id="lm-cat"></div>
@@ -551,7 +559,7 @@
             </div>
             <div id="inv-stones-container" class="stones-container">
               <div class="stone-col-headers">
-                <span>Type</span><span>Pcs</span><span>Wt/pc</span><span>Unit</span><span>₹ / ct</span><span>Total</span><span></span>
+                <span>Type</span><span>Pcs</span><span>Total Wt</span><span>Unit</span><span>₹ / ct</span><span>Total</span><span></span>
               </div>
               <div class="stones-empty" id="inv-stones-empty">No stones — click "+ Add Stone" to add</div>
             </div>

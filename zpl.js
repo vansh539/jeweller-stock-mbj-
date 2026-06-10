@@ -104,16 +104,13 @@ function generateZPL(item) {
   // ── FACE 2: stone details (up to 5 types) ────────────────────────────────
   if (stones.length > 0) {
     const count = Math.min(stones.length, 5);
-    // [fontH, fontW, yStart, rowGap]
-    const layouts = [
-      null,
-      [40, 11, 18,  0],   // 1 stone
-      [30, 11,  4,  8],   // 2 stones
-      [22, 11,  0,  5],   // 3 stones
-      [16, 11,  0,  4],   // 4 stones
-      [13, 10,  0,  2],   // 5 stones
-    ];
-    const [h, w, yStart, gap] = layouts[count];
+    // Fixed font per tier so 1-stone doesn't blow up to 40pt
+    let h, w, gap;
+    if (count <= 3)      { h = 22; w = 11; gap = 5; }
+    else if (count === 4){ h = 16; w = 10; gap = 3; }
+    else                 { h = 13; w = 10; gap = 2; }
+    const totalH = count * h + Math.max(0, count - 1) * gap;
+    const yStart = Math.max(0, Math.floor((76 - totalH) / 2));
 
     stones.slice(0, 5).forEach((s, i) => {
       const abbr = (s.type || 'STN').substring(0, 4).toUpperCase();

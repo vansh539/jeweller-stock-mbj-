@@ -211,7 +211,7 @@ function recalcAll(prefix) {
   const wastage  = parseFloat($(`${prefix}-wastage`)?.value) || 0;
   const rate     = getRateForPurity(metal, purity);
   const stoneTotalVal = stones.reduce((s, st) =>
-    s + (st.pieces || 1) * (st.weight || 0) * (st.price_per_ct || 0), 0);
+    s + (st.weight || 0) * (st.price_per_ct || 0), 0);
 
   const mrpEl = $(`${prefix}-mrp`);
   if (rate && netWt > 0) {
@@ -720,8 +720,7 @@ async function openPrintModal(sku) {
       if (it.stone_weight != null) {
         swDisplay = Number(it.stone_weight).toFixed(3);
       } else {
-        const totalCt = stones.reduce((sum, s) =>
-          sum + (s.pieces != null ? Number(s.pieces) * Number(s.weight || 0) : Number(s.weight || 0)), 0);
+        const totalCt = stones.reduce((sum, s) => sum + Number(s.weight || 0), 0);
         swDisplay = totalCt.toFixed(3);
       }
     }
@@ -786,7 +785,7 @@ async function openPrintModal(sku) {
         const abbr = (s.type || 'STN').substring(0, 4).toUpperCase();
         let row;
         if (s.pieces != null) {
-          const totalCt = (Number(s.pieces) * Number(s.weight || 0)).toFixed(2);
+          const totalCt = Number(s.weight || 0).toFixed(2);
           row = `${abbr}   ${s.pieces}/  ${totalCt}ct`;
         } else {
           const wt = Number(s.weight || 0);
@@ -1111,7 +1110,7 @@ invoiceForm.addEventListener('submit', async e => {
     weight_used:    Number($('inv-weight').value),
     wastage_pct:    Number($('inv-wastage').value) || 0,
     making_charges: Number($('inv-making').value)  || 0,
-    stone_price:    Math.round(getStonesFromForm('inv').reduce((s, st) => s + (st.pieces || 1) * (st.weight || 0) * (st.price_per_ct || 0), 0)),
+    stone_price:    Math.round(getStonesFromForm('inv').reduce((s, st) => s + (st.weight || 0) * (st.price_per_ct || 0), 0)),
     notes:          $('inv-notes').value.trim() || null,
   };
 

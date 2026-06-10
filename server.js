@@ -154,9 +154,9 @@ const VALID_STATUSES = new Set(['In Stock', 'Sold', 'Reserved', 'On Repair']);
 function stonesAggregate(stonesArr) {
   if (!Array.isArray(stonesArr) || stonesArr.length === 0) return { stone_type: null, stone_weight: null, stone_price: null };
   const first      = stonesArr[0];
-  const totalWt    = stonesArr.reduce((s, st) => s + ((parseInt(st.pieces) || 1) * (parseFloat(st.weight) || 0)), 0);
+  const totalWt    = stonesArr.reduce((s, st) => s + (parseFloat(st.weight) || 0), 0);
   const totalPrice = stonesArr.reduce((s, st) => {
-    const wt = (parseInt(st.pieces) || 1) * (parseFloat(st.weight) || 0);
+    const wt = parseFloat(st.weight) || 0;
     return s + wt * (parseFloat(st.price_per_ct) || 0);
   }, 0);
   return {

@@ -63,8 +63,7 @@ function generateZPL(item) {
     if (item.stone_weight != null) {
       swDisplay = Number(item.stone_weight).toFixed(3);
     } else {
-      const totalCt = stones.reduce((sum, s) =>
-        sum + (s.pieces != null ? Number(s.pieces) * Number(s.weight || 0) : Number(s.weight || 0)), 0);
+      const totalCt = stones.reduce((sum, s) => sum + Number(s.weight || 0), 0);
       swDisplay = totalCt.toFixed(3);
     }
   }

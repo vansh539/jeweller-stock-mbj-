@@ -7,8 +7,8 @@
  *
  * F1 layout:
  *   x=20–130  : left text column
- *   x=136–150 : vertical tag number (A0R)
- *   x=154–210 : rotated barcode (BCR)
+ *   x=126–140 : vertical tag number (A0R)
+ *   x=144–200 : rotated barcode (BCR)
  *
  * No-stone: MBJ(24pt) / cat+purity(16pt) / GW(14pt) / NW(14pt pinned bottom)
  * Stone:    MBJ(18pt) / cat+purity(13pt) / GW(13pt) / SW(12pt) / NW(11pt bottom)
@@ -19,8 +19,8 @@ function generateZPL(item) {
   const PW  = 744;
   const LL  = 104;
   const F1X = 20;
-  const TNX = 136;   // vertical tag number (14 dots wide → x=136–150)
-  const BCX = 154;   // rotated barcode
+  const TNX = 126;   // vertical tag number (14 dots wide → x=126–140)
+  const BCX = 144;   // rotated barcode → ends at x=200
   const RX  = 246;
 
   function barcodePayload(skuStr) {

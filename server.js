@@ -250,6 +250,10 @@ function buildUpdateRow(existing, body, sku) {
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
+app.get('/api/version', (req, res) => {
+  res.json({ version: '2026-06-10-BCX124', bcx: 124, tnx: 106 });
+});
+
 // GET /api/items
 // Supports: ?search= ?status= ?category= ?metal=
 app.get('/api/items', (req, res) => {

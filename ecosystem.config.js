@@ -6,7 +6,7 @@ module.exports = {
       name:        'jeweller-stock',
       script:      'server.js',
       cwd:         __dirname,
-      watch:       false,
+      watch:       ['server.js', 'zpl.js', 'db.js'],
       exec_mode:   'fork',
       instances:   1,
       autorestart: true,

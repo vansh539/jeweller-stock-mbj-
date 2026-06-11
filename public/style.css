@@ -644,6 +644,26 @@ a:hover { text-decoration: underline; }
 }
 .btn-remove-stone:hover { background: #f1b0b7; }
 
+.stone-diamond-row {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0 2px;
+  border-top: 1px dashed var(--border);
+  margin-top: 2px;
+}
+.stone-diamond-row label {
+  font-size: 0.78rem;
+  color: var(--text-light, #666);
+  white-space: nowrap;
+  font-weight: 600;
+}
+.stone-diamond-row input {
+  width: 80px !important;
+  padding: 5px 8px !important;
+}
+
 .stone-unit {
   padding: 7px 4px;
   border: 1.5px solid var(--border);

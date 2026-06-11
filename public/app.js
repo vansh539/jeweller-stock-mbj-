@@ -246,8 +246,23 @@ function addStoneRow(prefix, data = {}) {
            value="${data.price_per_ct != null ? data.price_per_ct : ''}">
     <span class="stone-value">—</span>
     <button type="button" class="btn-remove-stone" title="Remove">×</button>
+    <div class="stone-diamond-row" style="display:none">
+      <label>Colour:</label>
+      <input type="text" class="stone-colour"  placeholder="e.g. E"   maxlength="5" value="${esc(data.colour  || '')}">
+      <label>Clarity:</label>
+      <input type="text" class="stone-clarity" placeholder="e.g. VS1" maxlength="6" value="${esc(data.clarity || '')}">
+    </div>
   `;
   container.appendChild(row);
+
+  const stoneTypeEl = row.querySelector('.stone-type');
+  const diamondRow  = row.querySelector('.stone-diamond-row');
+
+  const toggleDiamondRow = (val) => {
+    diamondRow.style.display = val.trim().toLowerCase() === 'diamond' ? 'flex' : 'none';
+  };
+
+  if (data.type) toggleDiamondRow(data.type);
 
   const calcRow = () => {
     const pcs   = parseInt(row.querySelector('.stone-pieces').value)  || 1;
@@ -266,7 +281,8 @@ function addStoneRow(prefix, data = {}) {
   row.querySelector('.stone-weight').addEventListener('input', calcRow);
   row.querySelector('.stone-unit').addEventListener('change', calcRow);
   row.querySelector('.stone-ppc').addEventListener('input', calcRow);
-  row.querySelector('.stone-type').addEventListener('change', e => saveCustomOpt('stone', e.target.value));
+  stoneTypeEl.addEventListener('input',  e => toggleDiamondRow(e.target.value));
+  stoneTypeEl.addEventListener('change', e => { toggleDiamondRow(e.target.value); saveCustomOpt('stone', e.target.value); });
   row.querySelector('.btn-remove-stone').addEventListener('click', () => {
     row.remove();
     const remaining = container.querySelectorAll('.stone-row').length;
@@ -288,13 +304,22 @@ function getStonesFromForm(prefix) {
   const rows = $(`${prefix}-stones-container`).querySelectorAll('.stone-row');
   const stones = [];
   rows.forEach(row => {
-    const type   = row.querySelector('.stone-type').value.trim();
-    const pieces = parseInt(row.querySelector('.stone-pieces').value)  || 1;
-    const wt     = parseFloat(row.querySelector('.stone-weight').value) || 0;
-    const unit   = row.querySelector('.stone-unit')?.value || 'ct';
-    const wt_ct  = unit === 'g' ? wt / 0.2 : wt;  // always store in carats
-    const ppc    = parseFloat(row.querySelector('.stone-ppc').value)    || 0;
-    if (type || wt || ppc) stones.push({ type, pieces, weight: wt_ct, price_per_ct: ppc });
+    const type    = row.querySelector('.stone-type').value.trim();
+    const pieces  = parseInt(row.querySelector('.stone-pieces').value)  || 1;
+    const wt      = parseFloat(row.querySelector('.stone-weight').value) || 0;
+    const unit    = row.querySelector('.stone-unit')?.value || 'ct';
+    const wt_ct   = unit === 'g' ? wt / 0.2 : wt;
+    const ppc     = parseFloat(row.querySelector('.stone-ppc').value)    || 0;
+    const colour  = row.querySelector('.stone-colour')?.value.trim()  || '';
+    const clarity = row.querySelector('.stone-clarity')?.value.trim() || '';
+    if (type || wt || ppc) {
+      const stone = { type, pieces, weight: wt_ct, price_per_ct: ppc };
+      if (type.toLowerCase() === 'diamond') {
+        if (colour)  stone.colour  = colour;
+        if (clarity) stone.clarity = clarity;
+      }
+      stones.push(stone);
+    }
   });
   return stones;
 }
@@ -732,12 +757,14 @@ async function openPrintModal(sku) {
       return skuStr.replace(/[^0-9]/g, '').padStart(4, '0').slice(-4);
     }
     const bc = bcPayload(sku);
+    // Visible tag number: per-category counter if available, else SKU suffix
+    const tagNoDisplay = it.tag_no != null ? String(it.tag_no).padStart(4, '0') : bc;
 
     // ── Face 1 ──────────────────────────────────────────────────────────────
     $('lm-company').textContent = `MBJ  ${category}`;
     $('lm-name').textContent    = metalLine;
     $('lm-f1sw').textContent    = swDisplay ? `SW:${swDisplay}` : '';
-    $('lm-f1no').textContent    = bc;   // vertical tag number beside barcode
+    $('lm-f1no').textContent    = tagNoDisplay;
     $('lm-cat').textContent     = '';
 
     // Adjust font sizes & positions (mirrors ZPL layout)
@@ -790,6 +817,9 @@ async function openPrintModal(sku) {
         } else {
           const wt = Number(s.weight || 0);
           row = wt > 0 ? `${abbr}   ${wt.toFixed(2)}ct` : abbr;
+        }
+        if ((s.type || '').toLowerCase() === 'diamond' && (s.colour || s.clarity)) {
+          row += ` ${[s.colour, s.clarity].filter(Boolean).join('/')}`;
         }
         el.textContent    = row;
         el.style.top      = `${tops[i]}px`;

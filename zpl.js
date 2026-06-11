@@ -35,6 +35,8 @@ function generateZPL(item) {
   const gw       = item.gross_weight != null ? Number(item.gross_weight).toFixed(3) : '—';
   const nw       = Number(item.net_weight || 0).toFixed(3);
   const bc       = barcodePayload(sku);
+  // Visible tag number: per-category counter if available, else fall back to SKU suffix
+  const tagNo    = item.tag_no != null ? String(item.tag_no).padStart(4, '0') : bc;
 
   // "NECKLAC 22K" or "RING 22K" or just "NECKLAC"
   const catPurLine = [category, purity ? `${purity}K` : ''].filter(Boolean).join(' ');
@@ -77,11 +79,10 @@ function generateZPL(item) {
   lines.push('^MD12');
 
   // ── FACE 1 ────────────────────────────────────────────────────────────────
-  // Vertical tag number: A0R (90°CW) at x=136, flows downward
-  // h=14 → 14 dots wide; w=18 → 18 dots per char; 4 chars × 18 = 72 → y=2–74
-  lines.push(`^FO${TNX},2^A0R,14,18^FD${bc}^FS`);
+  // Vertical tag number: per-category counter (human-readable)
+  lines.push(`^FO${TNX},2^A0R,14,18^FD${tagNo}^FS`);
 
-  // Rotated barcode: BCR at x=154, bar_len=56 → x=154–210 ✓
+  // Rotated barcode: encodes SKU suffix for scanner lookup
   lines.push(`^FO${BCX},0^BY1,3^BCR,56,N,N,N^FD${bc}^FS`);
 
   // Left text column (x=20, up to x=130 = 110 dots)
@@ -119,6 +120,9 @@ function generateZPL(item) {
         row = `${abbr}   ${s.pieces}/  ${totalCt}ct`;
       } else {
         row = Number(s.weight || 0) > 0 ? `${abbr}   ${totalCt}ct` : abbr;
+      }
+      if ((s.type || '').toLowerCase() === 'diamond' && (s.colour || s.clarity)) {
+        row += `  ${[s.colour, s.clarity].filter(Boolean).join('/')}`;
       }
       lines.push(`^FO${RX},${yStart + i * (h + gap)}^A0N,${h},${w}^FD${row}^FS`);
     });

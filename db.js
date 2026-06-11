@@ -86,6 +86,30 @@ if (!_hasStonesJson) {
   `);
 }
 
+// Add tag_no column for per-category sequential tag numbers
+try { db.exec('ALTER TABLE items ADD COLUMN tag_no INTEGER'); } catch (_) {}
+
+// Per-category tag sequence
+db.exec(`
+  CREATE TABLE IF NOT EXISTS category_tag_sequence (
+    category TEXT PRIMARY KEY,
+    last_seq  INTEGER NOT NULL DEFAULT 0
+  );
+`);
+
+const _getNextTagSeq = db.transaction((category) => {
+  db.prepare(`
+    INSERT INTO category_tag_sequence (category, last_seq)
+    VALUES (?, 1)
+    ON CONFLICT(category) DO UPDATE SET last_seq = last_seq + 1
+  `).run(category);
+  return db.prepare('SELECT last_seq FROM category_tag_sequence WHERE category = ?').get(category).last_seq;
+});
+
+function generateTagNo(category) {
+  return _getNextTagSeq(category);
+}
+
 // Add new invoice breakup columns if they don't exist yet
 for (const col of [
   'ALTER TABLE invoices ADD COLUMN per_gram_rate  REAL',
@@ -175,4 +199,4 @@ function generateInvoiceNo() {
   return `INV-${dateKey}-${String(seq).padStart(4,'0')}`;
 }
 
-module.exports = { db, generateSKU, generateInvoiceNo };
+module.exports = { db, generateSKU, generateInvoiceNo, generateTagNo };

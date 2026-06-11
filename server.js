@@ -9,7 +9,7 @@ const fs      = require('fs');
 const crypto  = require('crypto');
 const { execSync } = require('child_process');
 
-const { db, generateSKU, generateInvoiceNo } = require('./db');
+const { db, generateSKU, generateInvoiceNo, generateTagNo } = require('./db');
 const { generateZPL }     = require('./zpl');
 
 const app  = express();
@@ -97,11 +97,11 @@ const stmts = {
     INSERT INTO items
       (sku, name, category, metal, purity,
        gross_weight, net_weight, stone_type, stone_weight,
-       stone_price, wastage_pct, making_rate, making_charges, mrp, supplier, date_added, status, notes, stones_json)
+       stone_price, wastage_pct, making_rate, making_charges, mrp, supplier, date_added, status, notes, stones_json, tag_no)
     VALUES
       (@sku, @name, @category, @metal, @purity,
        @gross_weight, @net_weight, @stone_type, @stone_weight,
-       @stone_price, @wastage_pct, @making_rate, @making_charges, @mrp, @supplier, @date_added, @status, @notes, @stones_json)
+       @stone_price, @wastage_pct, @making_rate, @making_charges, @mrp, @supplier, @date_added, @status, @notes, @stones_json, @tag_no)
   `),
 
   // full update (all mutable fields)
@@ -195,7 +195,7 @@ function validateItemBody(body, isCreate = true) {
 }
 
 /** Build a row object safe to pass to INSERT prepared statement. */
-function buildInsertRow(body, sku) {
+function buildInsertRow(body, sku, tagNo = null) {
   const today  = new Date().toISOString().slice(0, 10);
   const stones = Array.isArray(body.stones_json) ? body.stones_json : [];
   const agg    = stonesAggregate(stones);
@@ -219,6 +219,7 @@ function buildInsertRow(body, sku) {
     status:         body.status         || 'In Stock',
     notes:          body.notes          || null,
     stones_json:    stones.length ? JSON.stringify(stones) : null,
+    tag_no:         tagNo,
   };
 }
 
@@ -323,8 +324,9 @@ app.post('/api/items', (req, res) => {
       return res.status(400).json({ success: false, errors });
     }
 
-    const sku = generateSKU();
-    const row = buildInsertRow(req.body, sku);
+    const sku   = generateSKU();
+    const tagNo = generateTagNo(req.body.category);
+    const row   = buildInsertRow(req.body, sku, tagNo);
 
     stmts.insert.run(row);
 

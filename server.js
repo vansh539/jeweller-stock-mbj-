@@ -9,7 +9,7 @@ const fs      = require('fs');
 const crypto  = require('crypto');
 const { execSync } = require('child_process');
 
-const { db, generateSKU, generateInvoiceNo, generateTagNo } = require('./db');
+const { db, generateSKU, generateInvoiceNo } = require('./db');
 const { generateZPL }     = require('./zpl');
 
 const app  = express();
@@ -85,23 +85,32 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── Prepared statements ─────────────────────────────────────────────────────
 
+// Subquery that adds a live per-category tag_no (ROW_NUMBER over all items,
+// ordered by SKU so the oldest item in each category is always #1).
+// Using a subquery ensures the number is computed over ALL items even when
+// the outer query filters by status, search, etc.
+const ITEMS_WITH_TAG = `
+  SELECT *, ROW_NUMBER() OVER (PARTITION BY category ORDER BY sku) AS tag_no
+  FROM items
+`;
+
 const stmts = {
   // list all items (dynamic filtering is done in the route handler)
-  all:        db.prepare('SELECT * FROM items ORDER BY id DESC'),
+  all:        db.prepare(`SELECT * FROM (${ITEMS_WITH_TAG}) ORDER BY id DESC`),
 
   // single item
-  bySku:      db.prepare('SELECT * FROM items WHERE sku = ?'),
+  bySku:      db.prepare(`SELECT * FROM (${ITEMS_WITH_TAG}) WHERE sku = ?`),
 
-  // insert
+  // insert (no tag_no — it is computed dynamically, never stored)
   insert: db.prepare(`
     INSERT INTO items
       (sku, name, category, metal, purity,
        gross_weight, net_weight, stone_type, stone_weight,
-       stone_price, wastage_pct, making_rate, making_charges, mrp, supplier, date_added, status, notes, stones_json, tag_no)
+       stone_price, wastage_pct, making_rate, making_charges, mrp, supplier, date_added, status, notes, stones_json)
     VALUES
       (@sku, @name, @category, @metal, @purity,
        @gross_weight, @net_weight, @stone_type, @stone_weight,
-       @stone_price, @wastage_pct, @making_rate, @making_charges, @mrp, @supplier, @date_added, @status, @notes, @stones_json, @tag_no)
+       @stone_price, @wastage_pct, @making_rate, @making_charges, @mrp, @supplier, @date_added, @status, @notes, @stones_json)
   `),
 
   // full update (all mutable fields)
@@ -195,7 +204,7 @@ function validateItemBody(body, isCreate = true) {
 }
 
 /** Build a row object safe to pass to INSERT prepared statement. */
-function buildInsertRow(body, sku, tagNo = null) {
+function buildInsertRow(body, sku) {
   const today  = new Date().toISOString().slice(0, 10);
   const stones = Array.isArray(body.stones_json) ? body.stones_json : [];
   const agg    = stonesAggregate(stones);
@@ -219,7 +228,6 @@ function buildInsertRow(body, sku, tagNo = null) {
     status:         body.status         || 'In Stock',
     notes:          body.notes          || null,
     stones_json:    stones.length ? JSON.stringify(stones) : null,
-    tag_no:         tagNo,
   };
 }
 
@@ -284,7 +292,7 @@ app.get('/api/items', (req, res) => {
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-    const sql   = `SELECT * FROM items ${where} ORDER BY id DESC`;
+    const sql   = `SELECT * FROM (${ITEMS_WITH_TAG}) ${where} ORDER BY id DESC`;
     const items = db.prepare(sql).all(...params);
 
     res.json({ success: true, count: items.length, items });
@@ -301,7 +309,7 @@ app.get('/api/items/:sku', (req, res) => {
     let lookupSku = req.params.sku;
     if (/^\d{4}$/.test(lookupSku)) {
       const match = db.prepare(
-        "SELECT * FROM items WHERE sku LIKE '%-' || ? ORDER BY date_added DESC LIMIT 1"
+        `SELECT * FROM (${ITEMS_WITH_TAG}) WHERE sku LIKE '%-' || ? ORDER BY date_added DESC LIMIT 1`
       ).get(lookupSku);
       if (match) return res.json({ success: true, item: match });
     }
@@ -324,9 +332,8 @@ app.post('/api/items', (req, res) => {
       return res.status(400).json({ success: false, errors });
     }
 
-    const sku   = generateSKU();
-    const tagNo = generateTagNo(req.body.category);
-    const row   = buildInsertRow(req.body, sku, tagNo);
+    const sku = generateSKU();
+    const row = buildInsertRow(req.body, sku);
 
     stmts.insert.run(row);
 

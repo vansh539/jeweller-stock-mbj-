@@ -86,58 +86,9 @@ if (!_hasStonesJson) {
   `);
 }
 
-// Add tag_no column for per-category sequential tag numbers
+// tag_no column kept for schema compat but never written — server.js computes
+// it dynamically via ROW_NUMBER() so numbers always stay contiguous.
 try { db.exec('ALTER TABLE items ADD COLUMN tag_no INTEGER'); } catch (_) {}
-
-// Per-category tag sequence
-db.exec(`
-  CREATE TABLE IF NOT EXISTS category_tag_sequence (
-    category TEXT PRIMARY KEY,
-    last_seq  INTEGER NOT NULL DEFAULT 0
-  );
-`);
-
-// Backfill tag_no for any items that were added before this feature existed.
-// Runs at startup; is a no-op once all items have tag_no.
-const _backfillTagNos = db.transaction(() => {
-  const cats = db.prepare(
-    'SELECT DISTINCT category FROM items WHERE tag_no IS NULL'
-  ).all();
-  for (const { category } of cats) {
-    const maxRow = db.prepare(
-      'SELECT MAX(tag_no) AS m FROM items WHERE category = ?'
-    ).get(category);
-    let next = (maxRow.m || 0) + 1;
-    const nullItems = db.prepare(
-      'SELECT id FROM items WHERE category = ? AND tag_no IS NULL ORDER BY sku ASC'
-    ).all(category);
-    const upd = db.prepare('UPDATE items SET tag_no = ? WHERE id = ?');
-    for (const row of nullItems) {
-      upd.run(next, row.id);
-      next++;
-    }
-    // Sync sequence table so new inserts continue from the right number
-    db.prepare(`
-      INSERT INTO category_tag_sequence (category, last_seq)
-      VALUES (?, ?)
-      ON CONFLICT(category) DO UPDATE SET last_seq = MAX(last_seq, excluded.last_seq)
-    `).run(category, next - 1);
-  }
-});
-_backfillTagNos();
-
-const _getNextTagSeq = db.transaction((category) => {
-  db.prepare(`
-    INSERT INTO category_tag_sequence (category, last_seq)
-    VALUES (?, 1)
-    ON CONFLICT(category) DO UPDATE SET last_seq = last_seq + 1
-  `).run(category);
-  return db.prepare('SELECT last_seq FROM category_tag_sequence WHERE category = ?').get(category).last_seq;
-});
-
-function generateTagNo(category) {
-  return _getNextTagSeq(category);
-}
 
 // Add new invoice breakup columns if they don't exist yet
 for (const col of [
@@ -228,4 +179,4 @@ function generateInvoiceNo() {
   return `INV-${dateKey}-${String(seq).padStart(4,'0')}`;
 }
 
-module.exports = { db, generateSKU, generateInvoiceNo, generateTagNo };
+module.exports = { db, generateSKU, generateInvoiceNo };

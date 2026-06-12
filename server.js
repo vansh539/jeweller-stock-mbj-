@@ -85,12 +85,21 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── Prepared statements ─────────────────────────────────────────────────────
 
-// Subquery that adds a live per-category tag_no (ROW_NUMBER over all items,
-// ordered by SKU so the oldest item in each category is always #1).
-// Using a subquery ensures the number is computed over ALL items even when
-// the outer query filters by status, search, etc.
+// Explicit column list so the computed tag_no doesn't collide with the
+// stored (legacy) tag_no column — SQLite duplicate-name shadowing is unreliable.
+// Counts only non-Sold items within each category ordered by SKU (oldest = #1).
+// Sold items get NULL so they don't consume sequence numbers.
 const ITEMS_WITH_TAG = `
-  SELECT *, ROW_NUMBER() OVER (PARTITION BY category ORDER BY sku) AS tag_no
+  SELECT id, sku, name, category, metal, purity,
+         gross_weight, net_weight, stone_type, stone_weight, stone_price,
+         wastage_pct, making_rate, making_charges, mrp,
+         supplier, date_added, status, notes, stones_json,
+         CASE WHEN status = 'Sold' THEN NULL
+              ELSE (SELECT COUNT(*) FROM items i2
+                    WHERE i2.category = items.category
+                      AND i2.status  != 'Sold'
+                      AND i2.sku     <= items.sku)
+         END AS tag_no
   FROM items
 `;
 

@@ -283,6 +283,7 @@ function addStoneRow(prefix, data = {}) {
   row.querySelector('.stone-ppc').addEventListener('input', calcRow);
   stoneTypeEl.addEventListener('input',  e => toggleDiamondRow(e.target.value));
   stoneTypeEl.addEventListener('change', e => { toggleDiamondRow(e.target.value); saveCustomOpt('stone', e.target.value); });
+  stoneTypeEl.addEventListener('blur',   e => toggleDiamondRow(e.target.value));
   row.querySelector('.btn-remove-stone').addEventListener('click', () => {
     row.remove();
     const remaining = container.querySelectorAll('.stone-row').length;

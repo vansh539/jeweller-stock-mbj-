@@ -258,11 +258,11 @@ function addStoneRow(prefix, data = {}) {
   const stoneTypeEl = row.querySelector('.stone-type');
   const diamondRow  = row.querySelector('.stone-diamond-row');
 
-  const toggleDiamondRow = (val) => {
-    diamondRow.style.display = val.trim().toLowerCase() === 'diamond' ? 'flex' : 'none';
+  const toggleDiamondRow = () => {
+    diamondRow.style.display = stoneTypeEl.value.trim().toLowerCase() === 'diamond' ? 'flex' : 'none';
   };
 
-  if (data.type) toggleDiamondRow(data.type);
+  toggleDiamondRow(); // always run on init (handles pre-filled type + empty state)
 
   const calcRow = () => {
     const pcs   = parseInt(row.querySelector('.stone-pieces').value)  || 1;
@@ -281,9 +281,10 @@ function addStoneRow(prefix, data = {}) {
   row.querySelector('.stone-weight').addEventListener('input', calcRow);
   row.querySelector('.stone-unit').addEventListener('change', calcRow);
   row.querySelector('.stone-ppc').addEventListener('input', calcRow);
-  stoneTypeEl.addEventListener('input',  e => toggleDiamondRow(e.target.value));
-  stoneTypeEl.addEventListener('change', e => { toggleDiamondRow(e.target.value); saveCustomOpt('stone', e.target.value); });
-  stoneTypeEl.addEventListener('blur',   e => toggleDiamondRow(e.target.value));
+  stoneTypeEl.addEventListener('input',  toggleDiamondRow);
+  stoneTypeEl.addEventListener('keyup',  toggleDiamondRow);
+  stoneTypeEl.addEventListener('change', e => { toggleDiamondRow(); saveCustomOpt('stone', e.target.value); });
+  stoneTypeEl.addEventListener('blur',   toggleDiamondRow);
   row.querySelector('.btn-remove-stone').addEventListener('click', () => {
     row.remove();
     const remaining = container.querySelectorAll('.stone-row').length;

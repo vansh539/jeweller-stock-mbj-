@@ -10,8 +10,8 @@
  *   x=106–120 : vertical tag number (A0R)
  *   x=124–180 : rotated barcode (BCR)
  *
- * No-stone: MBJ(24pt) / cat+purity(16pt) / GW(14pt) / NW(14pt pinned bottom)
- * Stone:    MBJ(18pt) / cat+purity(13pt) / GW(13pt) / SW(12pt) / NW(11pt bottom)
+ * No-stone: MBJ(25pt) / cat+purity(17pt) / GW(15pt) / NW(15pt pinned bottom)
+ * Stone:    MBJ(17pt) / cat+purity(13pt) / GW(16pt) / SW(15pt) / NW(12pt bottom)
  *
  * F2 (x=246–432): up to 5 stone rows — adaptive font.
  */
@@ -88,11 +88,11 @@ function generateZPL(item) {
   // Left text column (x=20, up to x=130 = 110 dots)
   if (swDisplay !== null) {
     // Stone: MBJ big + 4 data rows; NW pinned at bottom
-    lines.push(`^FO${F1X},2^A0N,19,15^FDMBJ^FS`);               // y=2–21  (19pt, wide)
-    lines.push(`^FO${F1X},22^A0N,14,9^FD${catPurLine}^FS`);     // y=22–36
-    lines.push(`^FO${F1X},37^A0N,14,9^FDGW:${gw}g^FS`);         // y=37–51
-    lines.push(`^FO${F1X},52^A0N,13,9^FDSW:${swDisplay}ct^FS`); // y=52–65
-    lines.push(`^FO${F1X},64^A0N,12,9^FDNW:${nw}g^FS`);         // y=64–76 (bottom)
+    lines.push(`^FO${F1X},2^A0N,17,14^FDMBJ^FS`);               // y=2–19
+    lines.push(`^FO${F1X},19^A0N,13,9^FD${catPurLine}^FS`);     // y=19–32
+    lines.push(`^FO${F1X},32^A0N,16,9^FDGW:${gw}g^FS`);         // y=32–48  (bumped)
+    lines.push(`^FO${F1X},48^A0N,15,9^FDSW:${swDisplay}ct^FS`); // y=48–63  (bumped)
+    lines.push(`^FO${F1X},64^A0N,12,9^FDNW:${nw}g^FS`);         // y=64–76 (bottom, unchanged)
   } else {
     // No-stone: MBJ VERY big + 3 data rows; NW pinned at bottom with air gap
     lines.push(`^FO${F1X},2^A0N,25,21^FDMBJ^FS`);              // y=2–27  (25pt, very wide)

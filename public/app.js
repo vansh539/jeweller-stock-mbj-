@@ -246,8 +246,8 @@ function addStoneRow(prefix, data = {}) {
   row.innerHTML = `
     <input type="text"   class="stone-type"   list="dl-stone-types"
            placeholder="Stone type" autocomplete="off" value="${esc(data.type || '')}">
-    <input type="number" class="stone-pieces"  placeholder="Pcs" min="1" step="1"
-           value="${data.pieces != null ? data.pieces : 1}">
+    <input type="number" class="stone-pieces"  placeholder="Pcs" min="0" step="1"
+           value="${data.pieces != null && data.pieces > 0 ? data.pieces : ''}">
     <input type="number" class="stone-weight"  placeholder="Total Wt" min="0" step="0.001"
            value="${data.weight != null ? data.weight : ''}">
     <select class="stone-unit">
@@ -319,7 +319,8 @@ function getStonesFromForm(prefix) {
   const stones = [];
   rows.forEach(row => {
     const type    = row.querySelector('.stone-type').value.trim();
-    const pieces  = parseInt(row.querySelector('.stone-pieces').value)  || 1;
+    const pcsRaw  = row.querySelector('.stone-pieces').value.trim();
+    const pieces  = pcsRaw === '' ? null : (parseInt(pcsRaw) || 0);
     const wt      = parseFloat(row.querySelector('.stone-weight').value) || 0;
     const unit    = row.querySelector('.stone-unit')?.value || 'ct';
     const wt_ct   = unit === 'g' ? wt / 0.2 : wt;
@@ -909,7 +910,7 @@ async function openPrintModal(sku) {
       if (s) {
         const abbr = (s.type || 'STN').substring(0, 4).toUpperCase();
         let row;
-        if (s.pieces != null) {
+        if (s.pieces != null && s.pieces > 0) {
           const totalCt = Number(s.weight || 0).toFixed(2);
           row = `${abbr}   ${s.pieces}/  ${totalCt}ct`;
         } else {

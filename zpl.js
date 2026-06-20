@@ -88,17 +88,17 @@ function generateZPL(item) {
   // Left text column (x=20, up to x=130 = 110 dots)
   if (swDisplay !== null) {
     // Stone: MBJ big + 4 data rows; NW pinned at bottom
-    lines.push(`^FO${F1X},2^A0N,18,14^FDMBJ^FS`);               // y=2–20  (18pt, wide)
-    lines.push(`^FO${F1X},22^A0N,13,9^FD${catPurLine}^FS`);     // y=22–35
-    lines.push(`^FO${F1X},37^A0N,13,9^FDGW:${gw}g^FS`);         // y=37–50
-    lines.push(`^FO${F1X},52^A0N,12,9^FDSW:${swDisplay}g^FS`);  // y=52–64
-    lines.push(`^FO${F1X},65^A0N,11,9^FDNW:${nw}g^FS`);         // y=65–76 (bottom)
+    lines.push(`^FO${F1X},2^A0N,19,15^FDMBJ^FS`);               // y=2–21  (19pt, wide)
+    lines.push(`^FO${F1X},22^A0N,14,9^FD${catPurLine}^FS`);     // y=22–36
+    lines.push(`^FO${F1X},37^A0N,14,9^FDGW:${gw}g^FS`);         // y=37–51
+    lines.push(`^FO${F1X},52^A0N,13,9^FDSW:${swDisplay}ct^FS`); // y=52–65
+    lines.push(`^FO${F1X},64^A0N,12,9^FDNW:${nw}g^FS`);         // y=64–76 (bottom)
   } else {
     // No-stone: MBJ VERY big + 3 data rows; NW pinned at bottom with air gap
-    lines.push(`^FO${F1X},2^A0N,24,20^FDMBJ^FS`);              // y=2–26  (24pt, very wide)
-    lines.push(`^FO${F1X},28^A0N,16,9^FD${catPurLine}^FS`);    // y=28–44
-    lines.push(`^FO${F1X},46^A0N,14,9^FDGW:${gw}g^FS`);        // y=46–60
-    lines.push(`^FO${F1X},62^A0N,14,9^FDNW:${nw}g^FS`);        // y=62–76 (pinned, 2-dot gap)
+    lines.push(`^FO${F1X},2^A0N,25,21^FDMBJ^FS`);              // y=2–27  (25pt, very wide)
+    lines.push(`^FO${F1X},28^A0N,17,9^FD${catPurLine}^FS`);    // y=28–45
+    lines.push(`^FO${F1X},46^A0N,15,9^FDGW:${gw}g^FS`);        // y=46–61
+    lines.push(`^FO${F1X},61^A0N,15,9^FDNW:${nw}g^FS`);        // y=61–76 (pinned)
   }
 
   // ── FACE 2: stone details (up to 5 types) ────────────────────────────────
@@ -106,9 +106,9 @@ function generateZPL(item) {
     const count = Math.min(stones.length, 5);
     // Fixed font per tier so 1-stone doesn't blow up to 40pt
     let h, w, gap;
-    if (count <= 3)      { h = 22; w = 11; gap = 5; }
-    else if (count === 4){ h = 16; w = 10; gap = 3; }
-    else                 { h = 13; w = 10; gap = 2; }
+    if (count <= 3)      { h = 23; w = 12; gap = 5; }
+    else if (count === 4){ h = 17; w = 11; gap = 3; }
+    else                 { h = 14; w = 11; gap = 2; }
     const totalH = count * h + Math.max(0, count - 1) * gap;
     const yStart = Math.max(0, Math.floor((76 - totalH) / 2));
 

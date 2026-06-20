@@ -144,6 +144,55 @@ a:hover { text-decoration: underline; }
 .gold-refresh-btn:hover { color: #111; border-color: rgba(0,0,0,0.5); }
 .gold-refresh-btn.spinning { transform: rotate(360deg); }
 
+/* ─── Manual Rates Bar ───────────────────────────────────────────────────── */
+.manual-rates-bar {
+  background: #f4f0e8;
+  border-bottom: 1px solid var(--border);
+  padding: 7px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.manual-rates-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.manual-rates-inputs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.mr-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.mr-group label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.mr-group input[type="number"] {
+  width: 80px;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  background: var(--bg-card);
+}
+.manual-rates-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
 /* ─── Stats Bar ──────────────────────────────────────────────────────────── */
 .stats-bar {
   background: var(--primary-dark);

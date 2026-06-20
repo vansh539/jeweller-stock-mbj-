@@ -9,7 +9,8 @@
 let allItems   = [];   // master list from server
 let filtered   = [];   // currently displayed rows
 let currentSku = null; // SKU open in print modal
-let liveRates  = null; // populated by fetchGoldRates
+let liveRates    = null; // populated by fetchGoldRates
+let manualRates  = null; // { date, g24k, g22k, g18k, silver } — set manually today
 
 // ─── DOM refs ────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -173,16 +174,26 @@ function persistNewDropdownValues(formValues) {
 
 // ─── Stone rows ───────────────────────────────────────────────────────────────
 
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getEffectiveRates() {
+  if (manualRates && manualRates.date === todayStr()) return { rates: manualRates, source: 'manual' };
+  return { rates: liveRates, source: 'live' };
+}
+
 function getRateForPurity(metal, purity) {
-  if (!liveRates) return null;
+  const { rates } = getEffectiveRates();
+  if (!rates) return null;
   const m = (metal || '').toLowerCase().trim();
-  if (m === 'silver') return liveRates.silver || null;
+  if (m === 'silver') return rates.silver || null;
   const p = (purity || '').toUpperCase().trim();
-  if (p === '24K') return liveRates.g24k;
-  if (p === '22K') return liveRates.g22k;
-  if (p === '18K') return liveRates.g18k;
+  if (p === '24K') return rates.g24k;
+  if (p === '22K') return rates.g22k;
+  if (p === '18K') return rates.g18k;
   const k = parseFloat(p);
-  if (k && liveRates.g24k) return Math.round((k / 24) * liveRates.g24k);
+  if (k && rates.g24k) return Math.round((k / 24) * rates.g24k);
   return null;
 }
 
@@ -1114,7 +1125,13 @@ async function openInvoiceModal(sku) {
     : [];
   stonesData.forEach(s => addStoneRow('inv', s));
 
+  const { source } = getEffectiveRates();
+  const rateHint = source === 'manual'
+    ? '⚠ Using manual rate set today'
+    : 'Using live IBJA rate';
   showError('invoice-error', '');
+  const hintEl = $('inv-rate-hint');
+  if (hintEl) { hintEl.textContent = rateHint; hintEl.style.color = source === 'manual' ? 'var(--gold-dark)' : 'var(--text-muted)'; }
   calcInvoice();
   fetchGoldRates(); // refresh rates when invoice opens
 
@@ -1208,6 +1225,54 @@ async function fetchGoldRates() {
 
 $('gold-refresh-btn').addEventListener('click', fetchGoldRates);
 
+// ─── Manual rates ─────────────────────────────────────────────────────────────
+
+async function fetchManualRates() {
+  try {
+    const { ok, data } = await apiFetch('/api/manual-rates');
+    if (!ok || !data.rates) return;
+    manualRates = data.rates;
+    renderManualRatesMeta();
+    if (manualRates.g24k)   $('mr-24k').value   = manualRates.g24k;
+    if (manualRates.g22k)   $('mr-22k').value   = manualRates.g22k;
+    if (manualRates.g18k)   $('mr-18k').value   = manualRates.g18k;
+    if (manualRates.silver) $('mr-silver').value = manualRates.silver;
+  } catch (_) {}
+}
+
+function renderManualRatesMeta() {
+  const meta = $('manual-rates-meta');
+  if (!meta) return;
+  if (!manualRates || !manualRates.date) { meta.textContent = ''; return; }
+  const isToday = manualRates.date === todayStr();
+  meta.textContent = isToday
+    ? `✓ Set today — will be used for invoicing`
+    : `Set on ${manualRates.date} — not today, live rate will be used`;
+  meta.style.color = isToday ? 'var(--primary)' : 'var(--text-muted)';
+}
+
+$('set-manual-rates-btn').addEventListener('click', async () => {
+  const btn = $('set-manual-rates-btn');
+  const g24k   = Number($('mr-24k').value)   || null;
+  const g22k   = Number($('mr-22k').value)   || null;
+  const g18k   = Number($('mr-18k').value)   || null;
+  const silver = Number($('mr-silver').value) || null;
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const { ok, data } = await apiFetch('/api/manual-rates', {
+      method: 'POST',
+      body: JSON.stringify({ g24k, g22k, g18k, silver }),
+    });
+    if (ok) {
+      manualRates = data.rates;
+      renderManualRatesMeta();
+      toast('Manual rates saved — will be used for today\'s invoices', 'success');
+    }
+  } finally {
+    btn.disabled = false; btn.textContent = 'Set Rates';
+  }
+});
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 async function init() {
@@ -1271,7 +1336,7 @@ async function init() {
 
   scanInput.focus();
   scanClear.style.display = 'none';
-  await Promise.all([loadItems(), refreshStats(), fetchGoldRates()]);
+  await Promise.all([loadItems(), refreshStats(), fetchGoldRates(), fetchManualRates()]);
 }
 
 init();

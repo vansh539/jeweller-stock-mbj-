@@ -477,6 +477,27 @@ app.get('/api/stats', (req, res) => {
   }
 });
 
+// ─── Manual rates (in-memory, keyed by date) ─────────────────────────────────
+
+let _manualRates = null; // { date:'YYYY-MM-DD', g24k, g22k, g18k, silver }
+
+app.get('/api/manual-rates', (req, res) => {
+  res.json({ success: true, rates: _manualRates });
+});
+
+app.post('/api/manual-rates', (req, res) => {
+  const { g24k, g22k, g18k, silver } = req.body;
+  const today = new Date().toISOString().slice(0, 10);
+  _manualRates = {
+    date:   today,
+    g24k:   g24k   != null ? Number(g24k)   : null,
+    g22k:   g22k   != null ? Number(g22k)   : null,
+    g18k:   g18k   != null ? Number(g18k)   : null,
+    silver: silver != null ? Number(silver)  : null,
+  };
+  res.json({ success: true, rates: _manualRates });
+});
+
 // ─── Metal rates (IBJA gold + silver best-effort) ────────────────────────────
 
 let _rateCache = null; // { fetchedAt, g24k, g22k, g18k, silver, asOf }

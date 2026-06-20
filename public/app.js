@@ -11,6 +11,7 @@ let filtered   = [];   // currently displayed rows
 let currentSku = null; // SKU open in print modal
 let liveRates    = null; // populated by fetchGoldRates
 let manualRates  = null; // { date, g24k, g22k, g18k, silver } — set manually today
+const selectedSkus = new Set(); // batch print selection
 
 // ─── DOM refs ────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -362,10 +363,10 @@ async function refreshStats() {
 // ─── Load & render items ──────────────────────────────────────────────────────
 
 async function loadItems() {
-  tbody.innerHTML = '<tr class="loading-row"><td colspan="9">Loading items…</td></tr>';
+  tbody.innerHTML = '<tr class="loading-row"><td colspan="10">Loading items…</td></tr>';
   const { ok, data } = await apiFetch('/api/items');
   if (!ok) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="9">Failed to load items. ${esc(data.error || '')}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="10">Failed to load items. ${esc(data.error || '')}</td></tr>`;
     return;
   }
   allItems = data.items || [];
@@ -374,7 +375,7 @@ async function loadItems() {
 
 function renderTable(items) {
   if (!items.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">No items found.</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="10">No items found.</td></tr>';
     filterCount.textContent = '0 items';
     return;
   }
@@ -383,6 +384,7 @@ function renderTable(items) {
 
   tbody.innerHTML = items.map(item => `
     <tr data-sku="${esc(item.sku)}">
+      <td class="td-check"><input type="checkbox" class="row-chk" data-sku="${esc(item.sku)}" ${selectedSkus.has(item.sku) ? 'checked' : ''} /></td>
       <td class="td-sku">${esc(item.sku)}</td>
       <td class="td-name">${esc(item.name)}</td>
       <td>${esc(item.category)}</td>
@@ -499,6 +501,77 @@ function highlightSKU(sku) {
     }
   }, 50);
 }
+
+// ─── Batch print selection ────────────────────────────────────────────────────
+
+function updateBatchToolbar() {
+  const toolbar = $('batch-toolbar');
+  const countEl = $('batch-count');
+  const n = selectedSkus.size;
+  toolbar.hidden = n === 0;
+  if (countEl) countEl.textContent = `${n} tag${n !== 1 ? 's' : ''} selected`;
+  // sync header checkbox state
+  const allChk = $('select-all-chk');
+  if (allChk) {
+    const visible = [...tbody.querySelectorAll('.row-chk')];
+    allChk.checked = visible.length > 0 && visible.every(c => c.checked);
+    allChk.indeterminate = !allChk.checked && visible.some(c => c.checked);
+  }
+}
+
+tbody.addEventListener('change', e => {
+  const chk = e.target.closest('.row-chk');
+  if (!chk) return;
+  const sku = chk.dataset.sku;
+  chk.checked ? selectedSkus.add(sku) : selectedSkus.delete(sku);
+  updateBatchToolbar();
+});
+
+$('select-all-chk').addEventListener('change', e => {
+  tbody.querySelectorAll('.row-chk').forEach(chk => {
+    chk.checked = e.target.checked;
+    e.target.checked ? selectedSkus.add(chk.dataset.sku) : selectedSkus.delete(chk.dataset.sku);
+  });
+  updateBatchToolbar();
+});
+
+$('batch-deselect-btn').addEventListener('click', () => {
+  selectedSkus.clear();
+  tbody.querySelectorAll('.row-chk').forEach(c => { c.checked = false; });
+  updateBatchToolbar();
+});
+
+$('batch-print-btn').addEventListener('click', async () => {
+  if (selectedSkus.size === 0) return;
+  const btn = $('batch-print-btn');
+  btn.disabled = true;
+  btn.textContent = `Fetching ZPL…`;
+
+  try {
+    const skus = [...selectedSkus];
+    const zpls = await Promise.all(skus.map(async sku => {
+      const res = await fetch(`/api/items/${encodeURIComponent(sku)}/zpl`);
+      if (!res.ok) return null;
+      return res.text();
+    }));
+    const combined = zpls.filter(Boolean).join('\n');
+    if (!combined) { toast('No ZPL generated', 'error'); return; }
+
+    btn.textContent = 'Printing…';
+    const res  = await fetch('/api/print', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: combined });
+    const data = await res.json();
+    if (data.success) {
+      toast(`${zpls.filter(Boolean).length} tag(s) sent to printer!`, 'success');
+    } else {
+      toast(data.error || 'Print failed', 'error');
+    }
+  } catch {
+    toast('Could not reach print service', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🏷 Print Tags';
+  }
+});
 
 // ─── Filter event listeners ───────────────────────────────────────────────────
 

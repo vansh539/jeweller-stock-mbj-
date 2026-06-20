@@ -163,6 +163,7 @@
       <table class="items-table" id="items-table">
         <thead>
           <tr>
+            <th class="th-check"><input type="checkbox" id="select-all-chk" title="Select all visible" /></th>
             <th>SKU</th>
             <th>Description</th>
             <th>Category</th>
@@ -602,6 +603,13 @@
         </div>
       </form>
     </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ BATCH PRINT TOOLBAR -->
+  <div class="batch-toolbar" id="batch-toolbar" hidden>
+    <span class="batch-count" id="batch-count">0 selected</span>
+    <button class="btn btn-secondary btn-sm" id="batch-deselect-btn">Deselect All</button>
+    <button class="btn btn-primary" id="batch-print-btn">🏷 Print Tags</button>
   </div>
 
   <!-- ══════════════════════════════════════════ TOAST -->

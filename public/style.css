@@ -144,6 +144,40 @@ a:hover { text-decoration: underline; }
 .gold-refresh-btn:hover { color: #111; border-color: rgba(0,0,0,0.5); }
 .gold-refresh-btn.spinning { transform: rotate(360deg); }
 
+/* ─── Batch Print Toolbar ────────────────────────────────────────────────── */
+.batch-toolbar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--primary-dark);
+  color: #fff;
+  border-radius: 40px;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.32);
+  z-index: 900;
+  white-space: nowrap;
+}
+.batch-count {
+  font-size: 0.88rem;
+  font-weight: 600;
+  opacity: 0.9;
+}
+.th-check, .td-check {
+  width: 36px;
+  text-align: center;
+  padding: 6px 4px !important;
+}
+.row-chk, #select-all-chk {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
 /* ─── Manual Rates Bar ───────────────────────────────────────────────────── */
 .manual-rates-bar {
   background: #f4f0e8;

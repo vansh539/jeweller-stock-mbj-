@@ -432,16 +432,28 @@ function applyFilters() {
 
 // ─── Scan input ───────────────────────────────────────────────────────────────
 
-scanInput.addEventListener('keydown', e => {
+scanInput.addEventListener('keydown', async e => {
   if (e.key !== 'Enter') return;
   const val = scanInput.value.trim();
   if (!val) return;
 
-  // If it looks like a SKU (JS- prefix), find and highlight
   if (/^JS-/i.test(val)) {
+    // Full SKU — highlight directly
     highlightSKU(val.toUpperCase());
+  } else if (/^\d{1,4}$/.test(val)) {
+    // 4-digit barcode payload from USB HID scanner — resolve via API
+    scanHint.textContent = 'Looking up barcode…';
+    const { ok, data } = await apiFetch(`/api/items/${val.padStart(4,'0')}`);
+    if (ok && data.item) {
+      scanInput.value = '';
+      scanClear.style.display = 'none';
+      highlightSKU(data.item.sku);
+    } else {
+      scanHint.textContent = `Barcode "${val}" not found`;
+      toast('Item not found for this barcode', 'warning');
+    }
   } else {
-    // Use as search filter
+    // Free-text search filter
     filterSearch.value = val;
     applyFilters();
     scanHint.textContent = `Filtered table for: "${val}"`;
